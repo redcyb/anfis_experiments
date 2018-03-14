@@ -3,7 +3,7 @@ import os
 
 from skfuzzy import gaussmf
 
-from anfis import ANFIS
+from anfis1 import ANFIS
 from membership.membership_functions import MemFuncs
 from utils.utils import plotMFs
 from datetime import datetime
