@@ -4,14 +4,14 @@ from datetime import datetime
 from anfis import ANFIS
 from membership.membership_functions import MemFuncs, MemberFunction
 from utils.matlab_parser import read_mathlab_anfis_structure
-from utils.utils import plot_first_layer, read_anfis_settings
+from utils.utils import plot_first_layer, read_anfis_from_json_file
 
 # ts = numpy.loadtxt("trainingSetOutTrain.dat", usecols=[0, 1, 2, 3, 4])
 #
 # X = ts[:, 0:4]
 # Y = ts[:, 4]
 
-# settings = read_anfis_settings("../anfis/data/iris/4x3_gaussmf_linear.fis.json")
+# settings = read_anfis_from_json_file("../anfis/data/iris/4x3_gaussmf_linear.fis.json")
 settings = read_mathlab_anfis_structure("../anfis/data/iris/4x3_sigmmf_linear___before_train.fis")
 
 inputs = []

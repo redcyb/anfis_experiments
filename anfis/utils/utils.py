@@ -39,7 +39,7 @@ def plot_first_layer(inputs):
         plt.show()
 
 
-def read_anfis_settings(file_name):
+def read_anfis_from_json_file(file_name):
     real_path = os.path.realpath(file_name)
 
     with open(real_path, "r") as f:
