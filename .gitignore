@@ -1,0 +1,9 @@
+*.py[cod]
+
+dist/
+build/
+
+*.egg-info/
+
+.idea
+/anfis/.ipynb_checkpoints/
