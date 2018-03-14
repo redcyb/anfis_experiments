@@ -92,4 +92,5 @@ def parse_mf(data):
     return [func, params]
 
 
-# res = read_mathlab_anfis_structure("../data/iris/4x3_gaussmf_linear.fis")
+if __name__ == "__main__":
+    read_mathlab_anfis_structure("../data/iris/4x3_gaussmf_linear.fis")
