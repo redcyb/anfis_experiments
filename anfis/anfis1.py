@@ -244,13 +244,22 @@ class ANFIS:
         return self.memClass.evaluate_mf(sample_set)
 
     def layer_2_forward_pass(self, layer_1, previous_weights_l2):
-        mi_alloc = [
-            [
-                layer_1[var_num][self.rules[fuzzy_term][var_num]]  # get result of fuzzy term * var input
-                for var_num in range(self.rules.shape[1])  # for each column in rule. rules.shape[1] = vars len
-                ]
-            for fuzzy_term in range(self.rules.shape[0])  # rules rows.shape[0] = mfs terms count
-            ]
+        mi_alloc = []
+        for fuzzy_term_i in range(self.rules.shape[0]):
+            res = []
+            for var_i in range(self.rules.shape[1]):
+                rr = self.rules[fuzzy_term_i][var_i]
+                v1 = layer_1[var_i][rr]
+                res.append(v1)
+            mi_alloc.append(res)
+
+        # mi_alloc = [
+        #     [
+        #         layer_1[var_num][self.rules[fuzzy_term][var_num]]  # get result of fuzzy term * var input
+        #         for var_num in range(self.rules.shape[1])  # for each column in rule. rules.shape[1] = vars len
+        #         ]
+        #     for fuzzy_term in range(self.rules.shape[0])  # rules rows.shape[0] = mfs terms count
+        #     ]
 
         layer_2 = np.array([np.product(x) for x in mi_alloc]).T
 

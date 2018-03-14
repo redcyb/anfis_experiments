@@ -11,7 +11,7 @@ from datetime import datetime
 
 ts = numpy.loadtxt(os.path.realpath("../anfis/data/iris/irisTrain.dat"), usecols=[0, 1, 2, 3, 4])
 
-X = ts[:, 0:2]
+X = ts[:, 0:4]
 Y = ts[:, 4]
 
 
@@ -45,24 +45,24 @@ Y = ts[:, 4]
 mf_gauss = [
     [
         {'mean': 4.3, 'sigma': 0.7644},
-        # {'mean': 6.1, 'sigma': 0.7644},
+        {'mean': 6.1, 'sigma': 0.7644},
         {'mean': 7.9, 'sigma': 0.7644},
     ],
     [
         {'mean': 2.0, 'sigma': 0.5096},
-        # {'mean': 3.2, 'sigma': 0.5096},
+        {'mean': 3.2, 'sigma': 0.5096},
         {'mean': 4.4, 'sigma': 0.5096},
     ],
-    # [
-    #     {'mean': 1.0, 'sigma': 1.253},
-    #     {'mean': 3.95, 'sigma': 1.253},
-    #     {'mean': 6.9, 'sigma': 1.253},
-    # ],
-    # [
-    #     {'mean': 0.1, 'sigma': 0.5096},
-    #     {'mean': 1.3, 'sigma': 0.5096},
-    #     {'mean': 2.5, 'sigma': 0.5096},
-    # ],
+    [
+        {'mean': 1.0, 'sigma': 1.253},
+        {'mean': 3.95, 'sigma': 1.253},
+        {'mean': 6.9, 'sigma': 1.253},
+    ],
+    [
+        {'mean': 0.1, 'sigma': 0.5096},
+        {'mean': 1.3, 'sigma': 0.5096},
+        {'mean': 2.5, 'sigma': 0.5096},
+    ],
 ]
 
 

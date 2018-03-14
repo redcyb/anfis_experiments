@@ -3,45 +3,32 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 
+from lse import LSE
 from membership import mf_derivs
+from membership.membership_functions import Layer1
 
 
 class ANFIS2:
-    """Class to implement an Adaptive Network Fuzzy Inference System: ANFIS"
-
-    Attributes:
-        X
-        Y
-        XLen
-        memClass
-        memFuncs
-        memFuncsByVariable
-        rules
-        consequents
-        errors
-        memFuncsHomo
-        trainingType
-
-
-    """
-
-    def __init__(self, X, Y, inputs):
+    def __init__(self, X, Y, inputs, rules=None):
         self.X = np.array(copy.copy(X))
         self.Y = np.array(copy.copy(Y))
         self.XLen = len(self.X)
 
-        self.memClass = copy.deepcopy(memFunction)
-        self.memFuncs = self.memClass.mfs_list
-        self.memFuncsByVariable = [[x for x in range(len(self.memFuncs[z]))] for z in range(len(self.memFuncs))]
+        self.layer1 = Layer1(inputs)
 
-        self.rules = np.array(list(itertools.product(*self.memFuncsByVariable)))
+        memFuncsByVariable = [
+            [mf_num for mf_num in range(len(self.layer1.inputs[inp_num]["mfs"]))]
+            for inp_num in range(len(self.layer1.inputs))
+        ]
+
+        self.rules = np.array(rules) if rules else np.array(list(itertools.product(*memFuncsByVariable)))
 
         self.consequents = np.empty(self.Y.ndim * len(self.rules) * (self.X.shape[1] + 1))
         self.consequents.fill(0)
 
         self.errors = np.empty(0)
 
-        self.memFuncsHomo = all(len(i) == len(self.memFuncsByVariable[0]) for i in self.memFuncsByVariable)
+        self.memFuncsHomo = all(len(i) == len(memFuncsByVariable[0]) for i in memFuncsByVariable)
 
         self.trainingType = 'Not trained yet'
 
@@ -54,7 +41,7 @@ class ANFIS2:
         while (epoch < epochs) and (convergence is not True):
 
             # layer 4: forward pass
-            layer_4, weights_l2_sums, weights_l2 = self.forward_half_pass(self.X)
+            layer_4, weights_l2_sums, weights_l2 = self.forward_pass(self.X)
 
             # layer five: least squares estimate
             layer_5 = np.array(
@@ -112,13 +99,24 @@ class ANFIS2:
             else:
                 dAlpha = -eta * np.array(dE_dAlpha)
 
-            for varsWithMemFuncs in range(len(self.memFuncs)):
-                for MFs in range(len(self.memFuncsByVariable[varsWithMemFuncs])):
-                    paramList = sorted(self.memFuncs[varsWithMemFuncs][MFs])
-                    for param in range(len(paramList)):
-                        self.memFuncs[varsWithMemFuncs][MFs][paramList[param]] = (
-                            self.memFuncs[varsWithMemFuncs][MFs][paramList[param]] +
-                            dAlpha[varsWithMemFuncs][MFs][param])
+            # === Update params of mfs ===
+
+            for inp_i in range(len(self.layer1.inputs)):
+                for mf_i in range(len(self.layer1.inputs[inp_i])):
+
+                    params_list = sorted(self.layer1.inputs[inp_i]["mfs"][mf_i])
+
+                    for param_num in range(len(params_list)):
+
+                        # Update param
+
+                        self.layer1.inputs[inp_i]["mfs"][mf_i][params_list[param_num]] = (
+                            self.layer1.inputs[inp_i]["mfs"][mf_i][params_list[param_num]] +
+                            dAlpha[inp_i][mf_i][param_num]
+                        )
+
+            # === Update params of mfs end ===
+
             epoch += 1
 
         self.fitted_values = self.predict(self.X)
@@ -135,9 +133,9 @@ class ANFIS2:
             plt.xlabel('epoch')
             plt.show()
 
-    def plotMF(self, x, input_var, func):
-        for mf in range(len(self.memFuncs[input_var])):
-            y = func(x, **self.memClass.MFList[input_var][mf])
+    def plotMF(self, x, input_var):
+        for m in range(len(self.layer1.inputs[input_var])):
+            y = self.layer1.inputs[input_var]["mfs"][m](x)
             plt.plot(x, y, 'r')
         plt.show()
 
@@ -150,7 +148,7 @@ class ANFIS2:
             plt.legend(loc='upper left')
             plt.show()
 
-    def forward_half_pass(self, Xs):
+    def forward_pass(self, Xs):
         layer_4 = np.empty(0, )
         weights_l2 = None
         weights_l2_sums = []
@@ -187,17 +185,17 @@ class ANFIS2:
         return layer_4, weights_l2_sums, weights_l2
 
     def backprop(self, columnX, columns, theWSum, theW, theLayerFive):
-        paramGrp = [0] * len(self.memFuncs[columnX])
-        for MF in range(len(self.memFuncs[columnX])):
+        paramGrp = [0] * len(self.layer1.inputs[columnX])
+        for MF in range(len(self.layer1.inputs[columnX]["mfs"])):
 
-            parameters = np.empty(len(self.memFuncs[columnX][MF]))
+            parameters = np.empty(len(self.layer1.inputs[columnX]["mfs"][MF]))
             timesThru = 0
-            for alpha in sorted(self.memFuncs[columnX][MF].keys()):
+            for alpha in sorted(self.layer1.inputs[columnX]["mfs"][MF].keys()):
 
                 bucket3 = np.empty(len(self.X))
                 for rowX in range(len(self.X)):
                     varToTest = self.X[rowX, columnX]
-                    tmpRow = np.empty(len(self.memFuncs))
+                    tmpRow = np.empty(len(self.layer1.inputs))
                     tmpRow.fill(varToTest)
 
                     bucket2 = np.empty(self.Y.ndim)
@@ -208,16 +206,17 @@ class ANFIS2:
 
                         senSit = mf_derivs.partial_dMF(
                             self.X[rowX, columnX],
-                            self.memFuncs[columnX][MF],
-                            alpha,
-                            self.memFuncsInitialObj.func)
+                            self.layer1.inputs[columnX]["mfs"][MF],
+                            alpha)
 
                         # produces d_ruleOutput/d_parameterWithinMF
+
                         dW_dAplha = senSit * np.array(
-                            [np.prod([self.memClass.evaluate_mf(tmpRow)[c][self.rules[r][c]] for c in adjCols]) for r
+                            [np.prod([self.layer1.evaluate_mf(tmpRow)[c][self.rules[r][c]] for c in adjCols]) for r
                              in rulesWithAlpha])
 
                         bucket1 = np.empty(len(self.rules[:, 0]))
+
                         for consequent in range(len(self.rules[:, 0])):
                             fConsequent = np.dot(np.append(self.X[rowX, :], 1.), self.consequents[(
                                 (
@@ -256,16 +255,16 @@ class ANFIS2:
         return paramGrp
 
     def layer_1_forward_pass(self, sample_set):
-        return self.memClass.evaluate_mf(sample_set)
+        return self.layer1.evaluate_mf(sample_set)
 
     def layer_2_forward_pass(self, layer_1, previous_weights_l2):
         mi_alloc = [
             [
-                layer_1[var_num][self.rules[fuzzy_term][var_num]]  # get result of fuzzy term * var input
-                for var_num in range(self.rules.shape[1])  # for each column in rule. rules.shape[1] = vars len
-                ]
-            for fuzzy_term in range(self.rules.shape[0])  # rules rows.shape[0] = mfs terms count
+                layer_1[var_i][self.rules[fuzzy_term_i][var_i]]  # get result of fuzzy term * var input
+                for var_i in range(self.rules.shape[1])  # for each column in rule. rules.shape[1] = vars len
             ]
+            for fuzzy_term_i in range(self.rules.shape[0])  # rules rows.shape[0] = mfs terms count
+        ]
 
         layer_2 = np.array([np.product(x) for x in mi_alloc]).T
 
@@ -289,9 +288,15 @@ class ANFIS2:
         return layer_3, weights_l2_sums, weights_l3_normalized
 
     def predict(self, varsToTest):
-        [layerFour, wSum, w] = self.forward_half_pass(varsToTest)
+        [layerFour, wSum, w] = self.forward_pass(varsToTest)
 
         # layer five
         layerFive = np.dot(layerFour, self.consequents)
 
         return layerFive
+
+    def predict_no_learn(self, varsToTest):
+        layer_4, weights_l2_sums, weights_l2 = self.forward_pass(varsToTest)
+        layer_5 = np.array(LSE(layer_4, self.Y, 1000))
+        layer_5 = np.dot(layer_4, layer_5)
+        return layer_5
