@@ -2,7 +2,7 @@ import numpy
 
 from datetime import datetime
 from anfis import ANFIS
-from membership.membershipfunction import MemFuncs, MemberFunction
+from membership.membership_functions import MemFuncs, MemberFunction
 from utils.matlab_parser import read_mathlab_anfis_structure
 from utils.utils import plot_first_layer, read_anfis_settings
 

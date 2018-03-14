@@ -3,7 +3,7 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 
-from membership import mfDerivs
+from membership import mf_derivs
 
 
 def LSE(A, B, initialGamma=1000.):
@@ -273,7 +273,7 @@ class ANFIS:
                         rulesWithAlpha = np.array(np.where(self.rules[:, columnX] == MF))[0]
                         adjCols = np.delete(columns, columnX)
 
-                        senSit = mfDerivs.partial_dMF(
+                        senSit = mf_derivs.partial_dMF(
                             self.X[rowX, columnX],
                             self.memFuncs[columnX][MF],
                             alpha,

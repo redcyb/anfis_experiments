@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from membership.membershipfunction import evaluateMFforVar
+from membership.membership_functions import evaluateMFforVar
 
 
 def plotMFs(func, varss, mfs_general):
