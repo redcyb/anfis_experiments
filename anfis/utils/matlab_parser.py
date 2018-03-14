@@ -1,5 +1,5 @@
+import json
 import os
-import sys
 
 
 def read_mathlab_anfis_structure(file_name="anfis/data/iris/4x3_gaussmf_linear.fis"):
@@ -48,6 +48,9 @@ def read_mathlab_anfis_structure(file_name="anfis/data/iris/4x3_gaussmf_linear.f
         "version": data_dict["System"]["Version"]
     }
 
+    with open(f"{real_path}.json", "w") as ff:
+        ff.write(json.dumps(result))
+
     return result
 
 
@@ -89,7 +92,4 @@ def parse_mf(data):
     return [func, params]
 
 
-# if __name__ == "main":
-res = read_mathlab_anfis_structure("../data/iris/4x3_gaussmf_linear.fis")
-
-print(res)
+# res = read_mathlab_anfis_structure("../data/iris/4x3_gaussmf_linear.fis")
