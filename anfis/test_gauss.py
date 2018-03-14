@@ -68,8 +68,8 @@ mf_gauss = [
 
 # ===== Show me initial MFS ================================
 
-varss = [(4.3, 7.9), (2.0, 4.4), (1.0, 6.9), (0.1, 2.5)]
-plotMFs(gaussmf, varss, mf_gauss)
+# varss = [(4.3, 7.9), (2.0, 4.4), (1.0, 6.9), (0.1, 2.5)]
+# plotMFs(gaussmf, varss, mf_gauss)
 
 
 # ===== Learn ANFIS with initial MFs and training data =====
@@ -81,24 +81,24 @@ def test(epochs=10):
     anf = ANFIS(X, Y, mfc)
 
     t_start = datetime.now()
-
-    anf.trainHybridJangOffLine(epochs=epochs)
-
-    print(anf.consequents[-1][0])
-    print(anf.consequents[-2][0])
-    print(anf.fitted_values[9][0])
-
-    # if round(anf.consequents[-1][0], 6) == -5.275538 and round(anf.consequents[-2][0], 6) == -1.990703 and round(
-    #         anf.fittedValues[9][0], 6) == 0.002249:
-    #     print('test is good')
-
-    t_fin = datetime.now()
-
-    print(f"TIME SPENT: {(t_fin - t_start).seconds}s")
-
-    anf.plotErrors()
-    anf.plotResults()
+    #
+    # anf.trainHybridJangOffLine(epochs=epochs)
+    #
+    # print(anf.consequents[-1][0])
+    # print(anf.consequents[-2][0])
+    # print(anf.fitted_values[9][0])
+    #
+    # # if round(anf.consequents[-1][0], 6) == -5.275538 and round(anf.consequents[-2][0], 6) == -1.990703 and round(
+    # #         anf.fittedValues[9][0], 6) == 0.002249:
+    # #     print('test is good')
+    #
+    # t_fin = datetime.now()
+    #
+    # print(f"TIME SPENT: {(t_fin - t_start).seconds}s")
+    #
+    # anf.plotErrors()
+    # anf.plotResults()
 
 # ===== Run ANFIS with test data =====
 
-# test(20)
+test(20)

@@ -79,7 +79,7 @@ def parse_rules(data):
     for d in data:
         dd = d.split(", ")
         result.append({
-            "connections": [int(i) for i in dd[0].split(" ")],
+            "connections": [(int(i)-1) for i in dd[0].split(" ")],
             "number": dd[1].split(" : ")[0],
             "value": dd[1].split(" : ")[1]
         })

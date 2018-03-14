@@ -8,24 +8,6 @@ from membership import mf_derivs
 
 
 class ANFIS:
-    """Class to implement an Adaptive Network Fuzzy Inference System: ANFIS"
-
-    Attributes:
-        X
-        Y
-        XLen
-        memClass
-        memFuncs
-        memFuncsByVariable
-        rules
-        consequents
-        errors
-        memFuncsHomo
-        trainingType
-
-
-    """
-
     def __init__(self, X, Y, memFunction):
         self.X = np.array(copy.copy(X))
         self.Y = np.array(copy.copy(Y))
