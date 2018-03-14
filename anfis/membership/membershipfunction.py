@@ -4,6 +4,23 @@
 based on: tim.meggs
 """
 
+import skfuzzy as functions
+
+
+class MemberFunction:
+    def __init__(self, func, params):
+        self.func = getattr(functions, func)
+        self.params = params
+
+    def evaluate_mf_for_var(self, var):
+        return self.func(var, *self.params)
+
+    def __str__(self):
+        return f"{self.func.__name__} :: {self.params}"
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class MemFuncs:
     func = None

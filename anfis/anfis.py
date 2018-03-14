@@ -3,7 +3,7 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 
-from .membership import mfDerivs
+from membership import mfDerivs
 
 
 def LSE(A, B, initialGamma=1000.):
