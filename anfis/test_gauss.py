@@ -1,13 +1,15 @@
 import numpy
+import os
+
 from skfuzzy import gaussmf
 
 from anfis import ANFIS
 from membership.membership_functions import MemFuncs
-from utils import plotMFs
+from utils.utils import plotMFs
 from datetime import datetime
-from utils import plotMFs
 
-ts = numpy.loadtxt("trainingDebug.dat", usecols=[0, 1, 2, 3, 4])
+
+ts = numpy.loadtxt(os.path.realpath("../anfis/data/iris/irisTrain.dat"), usecols=[0, 1, 2, 3, 4])
 
 X = ts[:, 0:2]
 Y = ts[:, 4]
@@ -63,10 +65,11 @@ mf_gauss = [
     # ],
 ]
 
+
 # ===== Show me initial MFS ================================
 
-# varss = [(4.3, 7.9), (2.0, 4.4), (1.0, 6.9), (0.1, 2.5)]
-# plotMFs(gaussmf, varss, mf_gauss)
+varss = [(4.3, 7.9), (2.0, 4.4), (1.0, 6.9), (0.1, 2.5)]
+plotMFs(gaussmf, varss, mf_gauss)
 
 
 # ===== Learn ANFIS with initial MFs and training data =====
@@ -98,4 +101,4 @@ def test(epochs=10):
 
 # ===== Run ANFIS with test data =====
 
-test(20)
+# test(20)
