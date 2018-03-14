@@ -8,7 +8,6 @@ from membership.membership_functions import evaluateMFforVar
 
 
 def plotMFs(func, varss, mfs_general):
-
     for k, mfs in enumerate(mfs_general):
         print()
 
@@ -26,7 +25,6 @@ def plotMFs(func, varss, mfs_general):
 
 
 def plot_first_layer(inputs):
-
     for inp in inputs:
         print(inp)
 
