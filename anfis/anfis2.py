@@ -288,7 +288,7 @@ class ANFIS2:
         return layer_3, weights_l2_sums, weights_l3_normalized
 
     def predict(self, varsToTest):
-        [layerFour, wSum, w] = self.forward_pass(varsToTest)
+        layerFour, wSum, w = self.forward_pass(varsToTest)
 
         # layer five
         layerFive = np.dot(layerFour, self.consequents)
