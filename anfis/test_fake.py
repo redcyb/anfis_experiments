@@ -39,7 +39,10 @@ settings = read_mathlab_anfis_structure("../anfis/data/iris/4x3_gaussmf_linear__
 
 def test(epochs=10):
     inputs = []
+    outputs = []
+
     inputs_settings = settings["inputs"]
+    outputs_settings = settings["outputs"]
     rules = [r["connections"] for r in settings["rules"][0]]
 
     for i in inputs_settings:
@@ -49,33 +52,62 @@ def test(epochs=10):
             inpoot["mfs"].append(mf)
         inputs.append(inpoot)
 
-    anf = ANFIS2(X, Y, inputs)
+    for o in outputs_settings:
+        for j in o["mfs"]:
+            coeffs = j[1]
+            coeffs.reverse()
+            outputs += coeffs
 
-    t_start = datetime.now()
+    anf = ANFIS2(
+        X, Y,
+        inputs=inputs,
+        outputs=outputs,
+        # rules=rules
+    )
 
-    anf.trainHybridJangOffLine(epochs=epochs)
-
-    print(anf.consequents[-1][0])
-    print(anf.consequents[-2][0])
-    print(anf.fitted_values[9][0])
-
-    # if round(anf.consequents[-1][0], 6) == -5.275538 and round(anf.consequents[-2][0], 6) == -1.990703 and round(
-    #         anf.fittedValues[9][0], 6) == 0.002249:
-    #     print('test is good')
-
-    t_fin = datetime.now()
-
-    print(f"TIME SPENT: {(t_fin - t_start).seconds}s")
-
-    anf.plotErrors()
-    anf.plotResults()
+    # t_start = datetime.now()
+    #
+    # anf.trainHybridJangOffLine(epochs=epochs)
+    #
+    # print(anf.consequents[-1][0])
+    # print(anf.consequents[-2][0])
+    # print(anf.fitted_values[9][0])
+    #
+    # # if round(anf.consequents[-1][0], 6) == -5.275538 and round(anf.consequents[-2][0], 6) == -1.990703 and round(
+    # #         anf.fittedValues[9][0], 6) == 0.002249:
+    # #     print('test is good')
+    #
+    # t_fin = datetime.now()
+    #
+    # print(f"TIME SPENT: {(t_fin - t_start).seconds}s")
+    #
+    # anf.plotErrors()
+    # anf.plotResults()
 
     xx = numpy.array(X)
     predicted = anf.predict_no_learn(xx)
 
+    anf.fitted_values = anf.predict_no_learn(anf.X)
+    anf.residuals = anf.Y - anf.fitted_values[:, 0]
+
     errors = numpy.array([predicted[i] - Y[i] for i in range(anf.Y.shape[0])])
+    average_error = sum([abs(e) for e in errors[:, 0]]) / errors.shape[0]
+
+    print("average_error: ", average_error)
+
+    # print(anf.consequents[-1][0])
+    # print(anf.consequents[-2][0])
+    # print(anf.fitted_values[9][0])
+
+    # anf.plotErrors()
+    anf.plotResults()
 
     print()
+
+    # with open(os.path.realpath("../anfis/data/iris/irisTrainLayer5Result.dat"), "w") as f:
+    #     for d in predicted.T[0]:
+    #         f.write("".join(str(d)) + "\n")
+
 
 # ===== Run ANFIS with test data =====
 

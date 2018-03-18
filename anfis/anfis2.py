@@ -2,6 +2,7 @@ import itertools
 import numpy as np
 import copy
 import matplotlib.pyplot as plt
+import os
 
 from lse import LSE
 from membership import mf_derivs
@@ -9,12 +10,13 @@ from membership.membership_functions import Layer1
 
 
 class ANFIS2:
-    def __init__(self, X, Y, inputs, rules=None):
+    def __init__(self, X, Y, inputs, outputs=None, rules=None, **kwargs):
         self.X = np.array(copy.copy(X))
         self.Y = np.array(copy.copy(Y))
         self.XLen = len(self.X)
 
         self.layer1 = Layer1(inputs)
+        self.layer5 = np.array(np.matrix(outputs).T) if outputs else None
 
         memFuncsByVariable = [
             [mf_num for mf_num in range(len(self.layer1.inputs[inp_num]["mfs"]))]
@@ -23,14 +25,19 @@ class ANFIS2:
 
         self.rules = np.array(rules) if rules else np.array(list(itertools.product(*memFuncsByVariable)))
 
-        self.consequents = np.empty(self.Y.ndim * len(self.rules) * (self.X.shape[1] + 1))
-        self.consequents.fill(0)
+        if self.layer5 is None:
+            self.consequents = np.empty(self.Y.ndim * len(self.rules) * (self.X.shape[1] + 1))
+            self.consequents.fill(0)
+        else:
+            self.consequents = self.layer5
 
         self.errors = np.empty(0)
 
         self.memFuncsHomo = all(len(i) == len(memFuncsByVariable[0]) for i in memFuncsByVariable)
 
         self.trainingType = 'Not trained yet'
+        self.fitted_values = None
+        self.residuals = None
 
     def trainHybridJangOffLine(self, epochs=5, tolerance=1e-5, initialGamma=1000, k=0.01):
 
@@ -43,16 +50,19 @@ class ANFIS2:
             # layer 4: forward pass
             layer_4, weights_l2_sums, weights_l2 = self.forward_pass(self.X)
 
-            # layer five: least squares estimate
-            layer_5 = np.array(
-                LSE(layer_4, self.Y, initialGamma)
-            )
+            # Layer 5: linear coefficients
+            if self.layer5 is None:
+                # layer five: least squares estimate
+                pre_layer_5 = np.array(LSE(layer_4, self.Y, initialGamma))
+                self.consequents = pre_layer_5
+            else:
+                # It means we prefilled l5 with some coefficients and don't want them to be recalculated
+                pre_layer_5 = self.layer5
 
-            self.consequents = layer_5
-            layer_5 = np.dot(layer_4, layer_5)
+            layer_5 = np.dot(layer_4, pre_layer_5)
 
             # error
-            error = np.sum((self.Y - layer_5.T) ** 2)
+            error = np.sqrt(np.sum((self.Y - layer_5.T) ** 2) / self.Y.shape[0])
             print('current error: ', error)
 
             average_error = np.average(np.absolute(self.Y - layer_5.T))
@@ -296,7 +306,40 @@ class ANFIS2:
         return layerFive
 
     def predict_no_learn(self, varsToTest):
+        self.trainingType = "mathlab"
+
         layer_4, weights_l2_sums, weights_l2 = self.forward_pass(varsToTest)
-        layer_5 = np.array(LSE(layer_4, self.Y, 1000))
-        layer_5 = np.dot(layer_4, layer_5)
+
+        if self.layer5 is None:
+            # layer five: least squares estimate
+            pre_layer_5 = np.array(LSE(layer_4, self.Y, 1000))
+            self.consequents = pre_layer_5
+        else:
+            # It means we prefilled l5 with some coefficients and don't want them to be recalculated
+            pre_layer_5 = self.layer5
+
+        layer_5 = np.dot(layer_4, pre_layer_5)
+
+        # ===
+
+        with open(os.path.realpath("../anfis/data/iris/irisTrainLayer4Result.dat"), "w") as f:
+
+            for i in range(layer_4.shape[0]):
+
+                ll4 = np.array_split(layer_4[i], self.rules.shape[0])
+                ll5 = np.array_split(pre_layer_5.T[0], self.rules.shape[0])
+
+                ll_4_5_per_layer = [np.dot(ll4[i], ll5[i]) for i in range(len(ll4))]
+
+                f.write(
+                    "\t".join([str(d) for d in ll_4_5_per_layer]) +
+                    "\t" + str(self.Y[i]) +
+                    # "\t" + str(sum(ll_4_5_per_layer)) +
+                    "\n")
+
+        # ===
+
+        error = np.sqrt(np.sum((self.Y - layer_5.T) ** 2) / self.Y.shape[0])
+        print('current error: ', error)
+
         return layer_5
