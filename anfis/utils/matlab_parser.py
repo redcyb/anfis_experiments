@@ -52,6 +52,15 @@ def read_mathlab_anfis_structure(file_name, to_file=False):
         with open(f"{real_path}.json", "w") as ff:
             ff.write(json.dumps(result))
 
+        # === FOR GAUSSIAN ===
+
+        with open(f"{real_path}_old_ver.json", "w") as ff:
+            inputs = result["inputs"]
+            inputs_new = [
+                [{"mean": j[1][0], "sigma": j[1][1]} for j in i["mfs"]]
+                for i in inputs]
+            ff.write(json.dumps(inputs_new))
+
     return result
 
 
@@ -79,7 +88,7 @@ def parse_rules(data):
     for d in data:
         dd = d.split(", ")
         result.append({
-            "connections": [(int(i)-1) for i in dd[0].split(" ")],
+            "connections": [(int(i) - 1) for i in dd[0].split(" ")],
             "number": dd[1].split(" : ")[0],
             "value": dd[1].split(" : ")[1]
         })
@@ -95,4 +104,4 @@ def parse_mf(data):
 
 
 if __name__ == "__main__":
-    read_mathlab_anfis_structure("../data/iris/4x3_gaussmf_linear.fis")
+    read_mathlab_anfis_structure("../data/iris/4x3_gaussmf_linear___after_training.fis", True)
