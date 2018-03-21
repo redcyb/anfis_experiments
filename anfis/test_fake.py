@@ -7,14 +7,14 @@ from membership.membership_functions import MemberFunction, Layer1
 from utils.matlab_parser import read_mathlab_anfis_structure
 from utils.utils import plot_first_layer, read_anfis_from_json_file
 
-ts = numpy.loadtxt(os.path.realpath("../anfis/data/iris/irisTrain.dat"), usecols=[0, 1, 2, 3, 4])
+ts = numpy.loadtxt(os.path.realpath("../anfis/data/iris/irisTrain2.dat"), usecols=[0, 1, 2])
 
-X = ts[:, 0:4]
-Y = ts[:, 4]
+X = ts[:, 0:2]
+Y = ts[:, 2]
 
 # settings = read_anfis_from_json_file("../anfis/data/iris/4x3_gaussmf_linear.fis.json")
 # settings = read_mathlab_anfis_structure("../anfis/data/iris/4x3_gaussmf_linear___before_training.fis")
-settings = read_mathlab_anfis_structure("../anfis/data/iris/4x3_gaussmf_linear___after_training.fis")
+settings = read_mathlab_anfis_structure("../anfis/data/iris/2x2_gaussmf_linear___before_training.fis")
 
 
 # ===== Show me initial MFS ================================
@@ -61,28 +61,20 @@ def test(epochs=10):
     anf = ANFIS2(
         X, Y,
         inputs=inputs,
-        outputs=outputs,
+        # outputs=outputs,
         # rules=rules
     )
 
-    # t_start = datetime.now()
-    #
-    # anf.trainHybridJangOffLine(epochs=epochs)
-    #
-    # print(anf.consequents[-1][0])
-    # print(anf.consequents[-2][0])
-    # print(anf.fitted_values[9][0])
-    #
-    # # if round(anf.consequents[-1][0], 6) == -5.275538 and round(anf.consequents[-2][0], 6) == -1.990703 and round(
-    # #         anf.fittedValues[9][0], 6) == 0.002249:
-    # #     print('test is good')
-    #
-    # t_fin = datetime.now()
-    #
-    # print(f"TIME SPENT: {(t_fin - t_start).seconds}s")
-    #
-    # anf.plotErrors()
-    # anf.plotResults()
+    t_start = datetime.now()
+
+    anf.trainHybridJangOffLine(epochs=epochs)
+
+    t_fin = datetime.now()
+
+    print(f"TIME SPENT: {(t_fin - t_start).seconds}s")
+
+    anf.plotErrors()
+    anf.plotResults()
 
     xx = numpy.array(X)
     predicted = anf.predict_no_learn(xx)

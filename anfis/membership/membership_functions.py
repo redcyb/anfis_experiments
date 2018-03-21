@@ -5,6 +5,7 @@ based on: tim.meggs
 """
 
 import skfuzzy as functions
+import numpy as np
 
 
 class MemberFunction:
@@ -23,6 +24,62 @@ class MemberFunction:
 
     def evaluate_mf_for_var(self, var):
         return self.func(var, *self.params)
+
+    def partial_dmf(self, x, partial_parameter):
+        """Calculates the partial derivative of a membership function at a point x."""
+
+        if self.func == functions.gaussmf:
+
+            sigma = self.params[0]
+            mean = self.params[1]
+
+            if partial_parameter == 0:
+                result = (2. / sigma ** 3) * np.exp(-(((x - mean) ** 2) / sigma ** 2)) * (x - mean) ** 2
+            elif partial_parameter == 1:
+                result = (2. / sigma ** 2) * np.exp(-(((x - mean) ** 2) / sigma ** 2)) * (x - mean)
+            else:
+                raise Exception(f"Unknown parameter {partial_parameter}")
+
+        elif self.func == functions.gbellmf:
+
+            a = self.params[0]
+            b = self.params[1]
+            c = self.params[2]
+
+            if partial_parameter == 0:
+                result = (
+                    (2. * b * np.power((c - x), 2) * np.power(np.absolute((c - x) / a), ((2 * b) - 2))) /
+                    (np.power(a, 3) * np.power((np.power(np.absolute((c - x) / a), (2 * b)) + 1), 2))
+                )
+            elif partial_parameter == 1:
+                result = (
+                    -1 * (2 * np.power(np.absolute((c - x) / a), (2 * b)) * np.log(np.absolute((c - x) / a))) /
+                    (np.power((np.power(np.absolute((c - x) / a), (2 * b)) + 1), 2))
+                )
+            elif partial_parameter == 2:
+                result = (
+                    (2. * b * (c - x) * np.power(np.absolute((c - x) / a), ((2 * b) - 2))) /
+                    (np.power(a, 2) * np.power((np.power(np.absolute((c - x) / a), (2 * b)) + 1), 2))
+                )
+            else:
+                raise Exception(f"Unknown parameter {partial_parameter}")
+
+        elif self.func == functions.sigmf:
+
+            b = self.params[0]
+            c = self.params[1]
+
+            if partial_parameter == 0:
+                result = -1 * (c * np.exp(c * (b + x))) / np.power((np.exp(b * c) + np.exp(c * x)), 2)
+            elif partial_parameter == 1:
+                result = ((x - b) * np.exp(c * (x - b))) / np.power((np.exp(c * (x - c))) + 1, 2)
+            else:
+                raise Exception(f"Unknown parameter {partial_parameter}")
+
+        else:
+            raise Exception("Unknown function")
+
+        return result
 
 
 class MemFuncs:
@@ -66,13 +123,13 @@ class Layer1:
             [
                 self.inputs[inp_num]["mfs"][mf_num](sample_set[inp_num])
                 for mf_num in range(len(self.inputs[inp_num]["mfs"]))  # apply K FuzzyTerm part of MF
-            ]
+                ]
             for inp_num in range(len(sample_set))  # to I input var in sample set
-        ]
+            ]
 
 
 def evaluateMFforVar(func, MFListForVar, var):
     return [
         func(var, **MFListForVar[k])  # apply K part of MF to only one var
         for k in range(len(MFListForVar))
-    ]
+        ]

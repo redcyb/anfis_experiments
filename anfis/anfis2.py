@@ -2,10 +2,8 @@ import itertools
 import numpy as np
 import copy
 import matplotlib.pyplot as plt
-import os
 
 from lse import LSE
-from membership import mf_derivs
 from membership.membership_functions import Layer1
 
 
@@ -39,7 +37,7 @@ class ANFIS2:
         self.fitted_values = None
         self.residuals = None
 
-    def trainHybridJangOffLine(self, epochs=5, tolerance=1e-5, initialGamma=1000, k=0.01):
+    def trainHybridJangOffLine(self, epochs=5, tolerance=1e-5, initialGamma=1000, k=0.1):
 
         self.trainingType = 'trainHybridJangOffLine'
         convergence = False
@@ -74,9 +72,11 @@ class ANFIS2:
 
             # back propagation
             if convergence is not True:
-                cols = range(len(self.X[0, :]))
+                inputVarsCount = range(len(self.X[0, :]))
                 dE_dAlpha = list(
-                    self.backprop(colX, cols, weights_l2_sums, weights_l2, layer_5) for colX in range(self.X.shape[1]))
+                    self.backprop(inputVarNum, inputVarsCount, weights_l2_sums, weights_l2, layer_5)
+                    for inputVarNum in range(self.X.shape[1])
+                )
 
             if len(self.errors) >= 4:
                 if self.errors[-4] > self.errors[-3] > self.errors[-2] > self.errors[-1]:
@@ -113,17 +113,12 @@ class ANFIS2:
 
             for inp_i in range(len(self.layer1.inputs)):
                 for mf_i in range(len(self.layer1.inputs[inp_i])):
+                    mf = self.layer1.inputs[inp_i]["mfs"][mf_i]
 
-                    params_list = sorted(self.layer1.inputs[inp_i]["mfs"][mf_i])
-
-                    for param_num in range(len(params_list)):
-
+                    for param_num in range(len(mf.params)):
                         # Update param
-
-                        self.layer1.inputs[inp_i]["mfs"][mf_i][params_list[param_num]] = (
-                            self.layer1.inputs[inp_i]["mfs"][mf_i][params_list[param_num]] +
-                            dAlpha[inp_i][mf_i][param_num]
-                        )
+                        mf.params[param_num] = mf.params[param_num] + dAlpha[inp_i][mf_i][param_num]
+                        pass
 
             # === Update params of mfs end ===
 
@@ -133,30 +128,6 @@ class ANFIS2:
         self.residuals = self.Y - self.fitted_values[:, 0]
 
         return self.fitted_values
-
-    def plotErrors(self):
-        if self.trainingType == 'Not trained yet':
-            print(self.trainingType)
-        else:
-            plt.plot(range(len(self.errors)), self.errors, 'ro', label='errors')
-            plt.ylabel('error')
-            plt.xlabel('epoch')
-            plt.show()
-
-    def plotMF(self, x, input_var):
-        for m in range(len(self.layer1.inputs[input_var])):
-            y = self.layer1.inputs[input_var]["mfs"][m](x)
-            plt.plot(x, y, 'r')
-        plt.show()
-
-    def plotResults(self):
-        if self.trainingType == 'Not trained yet':
-            print(self.trainingType)
-        else:
-            plt.plot(range(len(self.fitted_values)), self.fitted_values, 'r', label='trained')
-            plt.plot(range(len(self.Y)), self.Y, 'b', label='original')
-            plt.legend(loc='upper left')
-            plt.show()
 
     def forward_pass(self, Xs):
         layer_4 = np.empty(0, )
@@ -194,30 +165,31 @@ class ANFIS2:
 
         return layer_4, weights_l2_sums, weights_l2
 
-    def backprop(self, columnX, columns, theWSum, theW, theLayerFive):
-        paramGrp = [0] * len(self.layer1.inputs[columnX])
-        for MF in range(len(self.layer1.inputs[columnX]["mfs"])):
+    def backprop(self, inputVarNumX, inputVarsCount, weights_l2_sums, weights_l2, layer_5):
+        mfs_count = len(self.layer1.inputs[inputVarNumX]["mfs"])
+        params_group = [0] * mfs_count
 
-            parameters = np.empty(len(self.layer1.inputs[columnX]["mfs"][MF]))
-            timesThru = 0
-            for alpha in sorted(self.layer1.inputs[columnX]["mfs"][MF].keys()):
+        for mf_index in range(mfs_count):
+            mf = self.layer1.inputs[inputVarNumX]["mfs"][mf_index]
+            mf_params = mf.params
 
+            mf_params_arr = np.empty(len(mf_params))
+            times_thru = 0
+
+            for alpha in range(len(mf_params)):
                 bucket3 = np.empty(len(self.X))
                 for rowX in range(len(self.X)):
-                    varToTest = self.X[rowX, columnX]
+                    varToTest = self.X[rowX, inputVarNumX]
                     tmpRow = np.empty(len(self.layer1.inputs))
                     tmpRow.fill(varToTest)
 
                     bucket2 = np.empty(self.Y.ndim)
                     for colY in range(self.Y.ndim):
 
-                        rulesWithAlpha = np.array(np.where(self.rules[:, columnX] == MF))[0]
-                        adjCols = np.delete(columns, columnX)
+                        rulesWithAlpha = np.array(np.where(self.rules[:, inputVarNumX] == mf_index))[0]
+                        adjCols = np.delete(inputVarsCount, inputVarNumX)
 
-                        senSit = mf_derivs.partial_dMF(
-                            self.X[rowX, columnX],
-                            self.layer1.inputs[columnX]["mfs"][MF],
-                            alpha)
+                        senSit = mf.partial_dmf(self.X[rowX, inputVarNumX], alpha)
 
                         # produces d_ruleOutput/d_parameterWithinMF
 
@@ -229,40 +201,34 @@ class ANFIS2:
 
                         for consequent in range(len(self.rules[:, 0])):
                             fConsequent = np.dot(np.append(self.X[rowX, :], 1.), self.consequents[(
-                                (
-                                    self.X.shape[
-                                        1] + 1) * consequent):(
-                                ((
-                                     self.X.shape[
-                                         1] + 1) * consequent) + (
-                                    self.X.shape[
-                                        1] + 1)),
-                                                                                 colY])
+                                (self.X.shape[1] + 1) * consequent):(
+                                ((self.X.shape[1] + 1) * consequent) + (self.X.shape[1] + 1)), colY])
                             acum = 0
                             if consequent in rulesWithAlpha:
-                                acum = dW_dAplha[np.where(rulesWithAlpha == consequent)] * theWSum[rowX]
+                                acum = dW_dAplha[np.where(rulesWithAlpha == consequent)] * weights_l2_sums[rowX]
 
-                            acum = acum - theW[consequent, rowX] * np.sum(dW_dAplha)
-                            acum = acum / theWSum[rowX] ** 2
+                            acum -= weights_l2[consequent, rowX] * np.sum(dW_dAplha)
+                            acum /= weights_l2_sums[rowX] ** 2
+
                             bucket1[consequent] = fConsequent * acum
 
                         sum1 = np.sum(bucket1)
 
                         if self.Y.ndim == 1:
-                            bucket2[colY] = sum1 * (self.Y[rowX] - theLayerFive[rowX, colY]) * (-2)
+                            bucket2[colY] = sum1 * (self.Y[rowX] - layer_5[rowX, colY]) * (-2)
                         else:
-                            bucket2[colY] = sum1 * (self.Y[rowX, colY] - theLayerFive[rowX, colY]) * (-2)
+                            bucket2[colY] = sum1 * (self.Y[rowX, colY] - layer_5[rowX, colY]) * (-2)
 
                     sum2 = np.sum(bucket2)
                     bucket3[rowX] = sum2
 
                 sum3 = np.sum(bucket3)
-                parameters[timesThru] = sum3
-                timesThru += 1
+                mf_params_arr[times_thru] = sum3
+                times_thru += 1
 
-            paramGrp[MF] = parameters
+            params_group[mf_index] = mf_params_arr
 
-        return paramGrp
+        return params_group
 
     def layer_1_forward_pass(self, sample_set):
         return self.layer1.evaluate_mf(sample_set)
@@ -322,24 +288,49 @@ class ANFIS2:
 
         # ===
 
-        with open(os.path.realpath("../anfis/data/iris/irisTrainLayer4Result.dat"), "w") as f:
-
-            for i in range(layer_4.shape[0]):
-
-                ll4 = np.array_split(layer_4[i], self.rules.shape[0])
-                ll5 = np.array_split(pre_layer_5.T[0], self.rules.shape[0])
-
-                ll_4_5_per_layer = [np.dot(ll4[i], ll5[i]) for i in range(len(ll4))]
-
-                f.write(
-                    "\t".join([str(d) for d in ll_4_5_per_layer]) +
-                    "\t" + str(self.Y[i]) +
-                    # "\t" + str(sum(ll_4_5_per_layer)) +
-                    "\n")
+        # import os
+        # with open(os.path.realpath("../anfis/data/iris/irisTrainLayer4Result.dat"), "w") as f:
+        #
+        #     for i in range(layer_4.shape[0]):
+        #
+        #         ll4 = np.array_split(layer_4[i], self.rules.shape[0])
+        #         ll5 = np.array_split(pre_layer_5.T[0], self.rules.shape[0])
+        #
+        #         ll_4_5_per_layer = [np.dot(ll4[i], ll5[i]) for i in range(len(ll4))]
+        #
+        #         f.write(
+        #             "\t".join([str(d) for d in ll_4_5_per_layer]) +
+        #             "\t" + str(self.Y[i]) +
+        #             # "\t" + str(sum(ll_4_5_per_layer)) +
+        #             "\n")
 
         # ===
 
         error = np.sqrt(np.sum((self.Y - layer_5.T) ** 2) / self.Y.shape[0])
-        print('current error: ', error)
+        print('prediction error: ', error)
 
         return layer_5
+
+    def plotErrors(self):
+        if self.trainingType == 'Not trained yet':
+            print(self.trainingType)
+        else:
+            plt.plot(range(len(self.errors)), self.errors, 'ro', label='errors')
+            plt.ylabel('error')
+            plt.xlabel('epoch')
+            plt.show()
+
+    def plotMF(self, x, input_var):
+        for m in range(len(self.layer1.inputs[input_var])):
+            y = self.layer1.inputs[input_var]["mfs"][m](x)
+            plt.plot(x, y, 'r')
+        plt.show()
+
+    def plotResults(self):
+        if self.trainingType == 'Not trained yet':
+            print(self.trainingType)
+        else:
+            plt.plot(range(len(self.fitted_values)), self.fitted_values, 'r', label='trained')
+            plt.plot(range(len(self.Y)), self.Y, 'b', label='original')
+            plt.legend(loc='upper left')
+            plt.show()
