@@ -1,16 +1,10 @@
 import numpy as np
 
 
-def partial_dMF(x, mf_name, mf_definition, partial_parameter):
-    """Calculates the partial derivative of a membership function at a point x.
+def partial_dMF(x, mf_definition, partial_parameter, func):
+    """Calculates the partial derivative of a membership function at a point x."""
 
-    Parameters
-    ------
-
-    Returns
-    ------
-
-    """
+    mf_name = func.__name__
 
     if mf_name == 'gaussmf':
 

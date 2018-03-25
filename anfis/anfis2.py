@@ -66,9 +66,8 @@ class ANFIS2:
             average_error = np.average(np.absolute(self.Y - layer_5.T))
             self.errors = np.append(self.errors, error)
 
-            if len(self.errors) != 0:
-                if self.errors[len(self.errors) - 1] < tolerance:
-                    convergence = True
+            if len(self.errors) != 0 and self.errors[-1] < tolerance:
+                convergence = True
 
             # back propagation
             if convergence is not True:
