@@ -321,7 +321,7 @@ class ANFIS:
 
         return layerFive
 
-    # my learning algorithms
+    # ============ backprop online learning algorithms ===========================================
 
     def train_backprop_online(self, training_set, epochs=10, threshold=0.001, learning_rate=0.01):
 
@@ -418,19 +418,7 @@ class ANFIS:
 
         grads_l4 = dE_by_A4 * dA4_by_Z4
 
-        # dE_by_L4Params = np.array(
-        #     [
-        #         [grads[i] * dZ4_by_L4Params[j] for j in range(len(dZ4_by_L4Params))]
-        #         for i in range(len(grads))]
-        # )
-
-        dE_by_L4Params = []
-        for i in range(len(grads_l4)):
-            g = grads_l4[i]
-            p = dZ4_by_L4Params[i]
-            r = g * p
-            dE_by_L4Params.append(r)
-        dE_by_L4Params = np.array(dE_by_L4Params)
+        dE_by_L4Params = np.array([grads_l4[i] * dZ4_by_L4Params[i] for i in range(len(grads_l4))])
 
         # 3. Prepare updates for L1 MF params
 

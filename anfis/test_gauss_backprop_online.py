@@ -52,7 +52,8 @@ mf_gauss = [
 def test(epochs=1000, threshold=0.0001, learning_rate=0.01):
     mfc = MemFuncs(gaussmf, mf_gauss)
 
-    anf = ANFIS(X, Y, mfc, l5_activation_func="tanh")
+    # anf = ANFIS(X, Y, mfc, l5_activation_func="tanh")
+    anf = ANFIS(X, Y, mfc, l5_activation_func="linear")
 
     t_start = datetime.now()
 
