@@ -49,10 +49,10 @@ mf_gauss = [
 
 # ===== Learn ANFIS with initial MFs and training data =====
 
-def test(epochs=1000, threshold=0.0005, learning_rate=0.01):
+def test(epochs=1000, threshold=0.0001, learning_rate=0.01):
     mfc = MemFuncs(gaussmf, mf_gauss)
 
-    anf = ANFIS(X, Y, mfc)
+    anf = ANFIS(X, Y, mfc, l5_activation_func="tanh")
 
     t_start = datetime.now()
 

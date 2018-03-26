@@ -50,7 +50,7 @@ def read_anfis_from_json_file(file_name):
 
 
 def plot_results_v2(Os, Ys):
-        plt.plot(range(len(Os)), Os, 'r', label='trained')
-        plt.plot(range(len(Ys)), Ys, 'b', label='original')
+        plt.plot(range(len(Os)), Os, 'ro', label='trained')
+        plt.plot(range(len(Ys)), Ys, 'bo', label='original')
         plt.legend(loc='upper left')
         plt.show()

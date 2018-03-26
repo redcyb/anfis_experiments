@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 from lse import LSE
 from membership import mf_derivs
-from utils.functions import derivative
+from utils.functions import derivative, activate
 
 
 class ANFIS:
@@ -26,9 +26,11 @@ class ANFIS:
     weights_4to5 = None
     dE_by_A5 = None
 
+    l5_activation_func = None
+
     predicted = None
 
-    def __init__(self, X, Y, memFunction):
+    def __init__(self, X, Y, memFunction, l5_activation_func="linear"):
         self.X = np.array(copy.copy(X))
         self.Y = np.array(copy.copy(Y))
         self.XLen = len(self.X)
@@ -49,6 +51,8 @@ class ANFIS:
         self.memFuncsHomo = all(len(i) == len(self.memFuncsByVariable[0]) for i in self.memFuncsByVariable)
 
         self.trainingType = 'Not trained yet'
+
+        self.l5_activation_func = l5_activation_func
 
     def trainHybridJangOffLine(self, epochs=5, tolerance=1e-5, initialGamma=1000, k=0.01):
 
@@ -381,14 +385,14 @@ class ANFIS:
         self.layer_5Z = self.layer_4A * self.weights_4to5
 
         # layer 5 : Summ
-        self.layer_5A = np.sum(self.layer_5Z, axis=0)
+        self.layer_5A = activate(self.l5_activation_func, np.sum(self.layer_5Z, axis=0))
 
         res = self.layer_5A
         return res
 
     def backprop_online(self, learning_rate=0.01):
         dE_by_A5 = self.dE_by_A5
-        dA5_by_Z5 = derivative("linear", self.layer_5A)
+        dA5_by_Z5 = derivative(self.l5_activation_func, self.layer_5A)
         dZ5_by_W4to5 = self.layer_4A  # temporary no bias neuron
 
         grads_l5 = dE_by_A5 * dA5_by_Z5  # gradients by output neurons
@@ -459,7 +463,7 @@ class ANFIS:
         wn_x = np.array([wght_n * x__with__bias for wght_n in self.layer_3])
 
         if self.layer_4_params is None:
-            self.layer_4_params = np.random.normal(0, 0.1, wn_x.shape)
+            self.layer_4_params = np.random.normal(0, 0.3, wn_x.shape)
 
         if self.weights_4to5 is None:
             self.weights_4to5 = np.ones((wn_x.shape[0], 1))
