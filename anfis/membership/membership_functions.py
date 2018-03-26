@@ -90,19 +90,19 @@ class MemFuncs:
         self.func = func
         print(func.__name__)
 
-    def evaluate_mf(self, sample_set):
+    def evaluate_mf(self, x):
         if not self.func:
             raise NotImplementedError("There is no function to call")
 
-        if len(sample_set) != len(self.mfs_list):
+        if len(x) != len(self.mfs_list):
             print("Number of variables does not match number of rule sets")
 
         return [
             [
-                self.func(sample_set[i], **self.mfs_list[i][k])
+                self.func(x[i], **self.mfs_list[i][k])
                 for k in range(len(self.mfs_list[i]))  # apply K FuzzyTerm part of MF
                 ]
-            for i in range(len(sample_set))  # to I input var in sample set
+            for i in range(len(x))  # to I input var in sample set
             ]
 
 

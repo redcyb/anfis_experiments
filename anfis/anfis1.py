@@ -1,13 +1,33 @@
 import itertools
+from random import shuffle
+
 import numpy as np
 import copy
 import matplotlib.pyplot as plt
 
 from lse import LSE
 from membership import mf_derivs
+from utils.functions import derivative
 
 
 class ANFIS:
+    layer_1 = None
+    layer_2 = None
+    layer_3 = None
+
+    layer_4A = None
+    layer_4Z = None
+
+    layer_3to4_A = None
+    layer_4_params = None
+    layer_5A = None  # Output of layer 5
+    layer_5Z = None  # Weighted sum of layer 4 output
+    E_out = None
+    weights_4to5 = None
+    dE_by_A5 = None
+
+    predicted = None
+
     def __init__(self, X, Y, memFunction):
         self.X = np.array(copy.copy(X))
         self.Y = np.array(copy.copy(Y))
@@ -135,6 +155,12 @@ class ANFIS:
             plt.legend(loc='upper left')
             plt.show()
 
+    def plot_results_v2(self, Ys):
+            plt.plot(range(self.layer_5A[0]), self.layer_5A, 'r', label='trained')
+            plt.plot(range(Ys.shape[0]), Ys, 'b', label='original')
+            plt.legend(loc='upper left')
+            plt.show()
+
     def forward_half_pass(self, Xs):
         layer_4 = np.empty(0, )
         weights_l2 = None
@@ -167,7 +193,8 @@ class ANFIS:
         weights_l2 = weights_l2.T
         # weights_l3_normalized = weights_l3_normalized.T
 
-        layer_4 = np.array(np.array_split(layer_4, count_of_X_samples))  # layer 4 becomes list of list, by count of sample_sets
+        layer_4 = np.array(
+            np.array_split(layer_4, count_of_X_samples))  # layer 4 becomes list of list, by count of sample_sets
 
         return layer_4, weights_l2_sums, weights_l2
 
@@ -289,3 +316,165 @@ class ANFIS:
         layerFive = np.dot(layerFour, self.consequents)
 
         return layerFive
+
+    # my learning algorithms
+
+    def train_backprop_online(self, training_set, epochs=10, threshold=0.001, learning_rate=0.01):
+
+        self.trainingType = 'backprop online'
+        shuffle(training_set)
+        Xs = training_set[:, 0:4]
+        Ys = training_set[:, 4:]
+
+        epoch = 0
+
+        while epoch < epochs:
+            # if not epoch % 100:
+            #     shuffle(training_set)
+            #     Xs = training_set[:, 0:4]
+            #     Ys = training_set[:, 4:]
+
+            epoch += 1
+            epoch_errors = []
+
+            for z in range(Xs.shape[0]):
+                x = Xs[z]
+                y = Ys[z]
+
+                self.forward_online(x)
+
+                self.E_out = np.power((y - self.layer_5A), 2) / 2
+                E_out_summ = np.sum(self.E_out, axis=0)
+                epoch_errors.append(E_out_summ)
+
+                self.dE_by_A5 = self.layer_5A - y
+
+                self.backprop_online(learning_rate=learning_rate)
+
+            # Service stuff
+
+            epoch_error = sum(epoch_errors)/epochs
+            self.errors = np.append(self.errors, epoch_error)
+
+            if not epoch % 10:
+                print(f"\nEpoch: {epoch}")
+                print(f"Error: {epoch_error}; Threshold: {threshold}")
+                print(f"Error: {epoch_error < threshold}")
+
+            if epoch_error < threshold:
+                break
+
+    def forward_online(self, x):
+
+        # layer 1 : FUZZIFICATION
+        self.layer_1 = self.layer_1_forward_online(x)
+
+        # layer 2 : AGGREGATION
+        self.layer_2 = self.layer_2_forward_online()
+
+        # layer 3 : NORMALIZATION
+        self.layer_3 = self.layer_3_forward_online()
+
+        # layer 4 : TSK
+        self.layer_4A = self.layer_4_forward_online(x)
+
+        self.layer_5Z = self.layer_4A * self.weights_4to5
+
+        # layer 5 : Summ
+        self.layer_5A = np.sum(self.layer_5Z, axis=0)
+
+        res = self.layer_5A
+        return res
+
+    def backprop_online(self, learning_rate=0.01):
+        dE_by_A5 = self.dE_by_A5
+        dA5_by_Z5 = derivative("linear", self.layer_5A)
+        dZ5_by_W4to5 = self.layer_4A  # temporary no bias neuron
+
+        grads_l5 = dE_by_A5 * dA5_by_Z5  # gradients by output neurons
+
+        # 1. Prepare deltas for weights_4to5
+
+        dE_by_W4to5 = np.array(  # deltas for updating weights
+            [
+                [grads_l5[i] * dZ5_by_W4to5[j] for j in range(dZ5_by_W4to5.shape[0])]
+                for i in range(grads_l5.shape[0])
+                ]
+        ).T[0]
+
+        # 2. Prepare updates for L4 TSK params
+
+        dA4_by_Z4 = derivative("linear", self.layer_4A)
+        dZ4_by_L4Params = self.layer_3to4_A
+
+        dE_by_Z5 = grads_l5
+        dZ5_by_A4 = self.weights_4to5
+
+        dE_by_A4 = np.array(np.dot(np.matrix(dZ5_by_A4), dE_by_Z5))[0]
+
+        grads_l4 = dE_by_A4 * dA4_by_Z4
+
+        # dE_by_L4Params = np.array(
+        #     [
+        #         [grads[i] * dZ4_by_L4Params[j] for j in range(len(dZ4_by_L4Params))]
+        #         for i in range(len(grads))]
+        # )
+
+        dE_by_L4Params = []
+        for i in range(len(grads_l4)):
+            g = grads_l4[i]
+            p = dZ4_by_L4Params[i]
+            r = g * p
+            dE_by_L4Params.append(r)
+        dE_by_L4Params = np.array(dE_by_L4Params)
+
+        # 3. Prepare updates for L1 MF params
+
+        # 1.1. Tune weights_4to5
+
+        self.layer_4_params -= learning_rate * dE_by_L4Params
+        self.weights_4to5 -= learning_rate * dE_by_W4to5
+
+        pass
+
+    def layer_1_forward_online(self, x):
+        return np.array(self.memClass.evaluate_mf(x))
+
+    def layer_2_forward_online(self):
+        mi_alloc = [
+            [
+                self.layer_1[var_num][self.rules[fuzzy_term][var_num]]  # get result of fuzzy term * var input
+                for var_num in range(self.rules.shape[1])  # for each column in rule. rules.shape[1] = vars len
+                ]
+            for fuzzy_term in range(self.rules.shape[0])  # rules rows.shape[0] = mfs terms count
+            ]  # ALL Rules w MFs combinations
+        return np.array([np.product(r) for r in mi_alloc]).T  # weights
+
+    def layer_3_forward_online(self):
+        weights_l2_sum = np.sum(self.layer_2)  # float
+        return self.layer_2 / weights_l2_sum
+
+    def layer_4_forward_online(self, x):
+        x__with__bias = np.append(x, 1)
+        wn_x = np.array([wght_n * x__with__bias for wght_n in self.layer_3])
+
+        if self.layer_4_params is None:
+            self.layer_4_params = np.random.normal(0, 0.1, wn_x.shape)
+
+        if self.weights_4to5 is None:
+            self.weights_4to5 = np.ones((wn_x.shape[0], 1))
+
+        self.layer_3to4_A = wn_x
+
+        self.layer_4Z = wn_x * self.layer_4_params
+
+        return np.array(np.matrix(np.sum(self.layer_4Z, axis=1)).T)
+
+    def predict_online(self, Xs, Ys=None):
+        errors = []
+        predicted = [self.forward_online(Xs[i]) for i in range(Xs.shape[0])]
+
+        if Ys is not None:
+            errors = Ys - predicted
+
+        return predicted, errors
