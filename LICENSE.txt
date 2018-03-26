@@ -1,6 +1,6 @@
 The MIT License (MIT)
 
-Copyright (c) 2015 Timothy Meggs
+Copyright (c) 2018 Alex Marusyk
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
