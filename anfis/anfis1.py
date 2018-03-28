@@ -109,7 +109,7 @@ class ANFIS1:
             epoch_error = sum(epoch_errors) / epochs
             self.errors = np.append(self.errors, epoch_error)
 
-            if not epoch % 5 or epoch == 1:
+            if not epoch % 20 or epoch == 1:
                 print(f"\nEpoch: {epoch}")
                 print(f"Error: {epoch_error}; Threshold: {threshold}")
                 print(f"Error: {epoch_error < threshold}")
