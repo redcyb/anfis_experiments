@@ -4,6 +4,7 @@ from random import shuffle
 import numpy as np
 import copy
 import matplotlib.pyplot as plt
+from skfuzzy import partial_dmf
 
 from lse import LSE
 from membership import mf_derivs
@@ -179,6 +180,8 @@ class ANFIS1:
             self.layer_4_params = np.ones(wn_x.shape)
 
         if self.weights_4to5 is None:
+            # TODO Ones only for testing. Change it to randoms!
+            # self.weights_4to5 = np.random.normal(1, 0.1, (wn_x.shape[0], 1))
             self.weights_4to5 = np.ones((wn_x.shape[0], 1))
 
         self.layer_3to4_A = wn_x
@@ -202,7 +205,7 @@ class ANFIS1:
         _, grads_l2 = self.layer_2_backprop(grads_l3)
 
         # Layer 1
-        dE_by_W1, grads_l1 = self.layer_1_backprop(grads_l2)
+        dE_by_MF_params, _ = self.layer_1_backprop(grads_l2)
 
         self.layer_4_params -= learning_rate * dE_by_L4Params
         self.weights_4to5 -= learning_rate * dE_by_W4to5
@@ -234,7 +237,7 @@ class ANFIS1:
         dE_by_Z5 = grads_l5
         dZ5_by_A4 = self.weights_4to5
 
-        dE_by_A4 = np.array(np.dot(np.matrix(dZ5_by_A4), dE_by_Z5))[0]
+        dE_by_A4 = np.array(np.dot(dZ5_by_A4, dE_by_Z5))
 
         grads_l4 = dE_by_A4 * dA4_by_Z4
 
@@ -259,73 +262,80 @@ class ANFIS1:
         return None, grads_l3
 
     def layer_2_backprop(self, grads_l3):
-        dA2_by_Z2 = np.ones(self.layer_2A.shape)
-
         dE_by_Z3 = grads_l3
         dZ3_by_A2 = np.ones(self.layer_2A.shape)
 
         dE_by_A2 = dZ3_by_A2 * dE_by_Z3
 
-        grads_l2 = dE_by_A2 * dA2_by_Z2
+        # dA2_by_Z2 = np.ones(self.layer_2A.shape)
+
+        # MFs to L2 Links Handling. Derivatives A2 by Z2
+
+        _l2_parts_for_derivative = []
+        for _rule in range(self.rules.shape[0]):
+            _derivs = []
+            _a = []
+            for _var_num in range(self.rules.shape[1]):
+                _d = self.rules[_rule][_var_num]
+                _b = self.layer_1A[_var_num][_d]  # get result of fuzzy term * var input
+                _a.append(_b)
+            for _var_num in range(self.rules.shape[1]):
+                _c = copy.copy(_a)
+                _c.pop(_var_num)
+                _derivs.append(_c)
+            _l2_parts_for_derivative.append(_derivs)
+
+        _l2_partial_derivs_by_mfs = []
+        for i in _l2_parts_for_derivative:
+            _r = [np.product(derv) for derv in i]
+            _l2_partial_derivs_by_mfs.append(_r)
+
+        dA2_by_Z2 = np.array(_l2_partial_derivs_by_mfs)
+
+        grads_l2 = np.array(dA2_by_Z2 * np.array(np.matrix(dE_by_A2).T))
 
         return None, grads_l2
 
     def layer_1_backprop(self, grads_l2):
-        # 3. ====================== Prepare error gradients on Layer 2 ===============================================
 
-        # dA2_by_Z2 = derivative("linear", self.layer_2A)
-        #
-        # # get partial derivs by var mfs
-        #
-        # _l2_parts_for_derivative_alloc2 = []
-        # for _rule in range(self.rules.shape[0]):
-        #     _derivs = []
-        #     _a = []
-        #     for _var_num in range(self.rules.shape[1]):
-        #         _d = self.rules[_rule][_var_num]
-        #         _b = self.layer_1A[_var_num][_d]  # get result of fuzzy term * var input
-        #         _a.append(_b)
-        #     for _var_num in range(self.rules.shape[1]):
-        #         _c = copy.copy(_a)
-        #         _c.pop(_var_num)
-        #         _derivs.append(_c)
-        #     _l2_parts_for_derivative_alloc2.append(_derivs)
-        #
-        # _l2_partial_derivs_by_mfs_alloc3 = []
-        # for i in _l2_parts_for_derivative_alloc2:
-        #     _r = [np.product(derv) for derv in i]
-        #     _l2_partial_derivs_by_mfs_alloc3.append(_r)
-        #
-        # dZ2_by_L1MFs = np.array(_l2_partial_derivs_by_mfs_alloc3)
-        #
-        # dE_by_Z4 = grads_l4
-        # dZ4_by_A2 = self.layer_2Z
-        #
-        # _l2Z = np.array(self.layer_2Z)
-        #
-        # dE_by_A2 = np.array(
-        #     np.ones(_l2Z.shape) * np.array(np.matrix(dE_by_Z4).T)
-        # )
-        #
-        # # grads_l2 = dE_by_A2 * dA2_by_Z2
-        # grads_l2 = dE_by_A2  # dA2_by_Z2 contains only zeroes, ignore it
-        #
-        # # 3. Prepare updates for L1 MF params
-        #
-        # dA1_by_Z1 = np.array([derivative("gaussian", i) for i in self.layer_1A])
-        # dZ1_by_W_XtoMF = self.layer_0A
-        #
-        # dE_by_Z2 = grads_l2
-        # dZ2_by_A1 = dZ2_by_L1MFs
-        #
-        # dE_by_A1 = np.array(np.dot(np.matrix(dZ2_by_A1), np.matrix(dE_by_Z2)))[0]
-        #
-        # grads = dE_by_A1 * dA1_by_Z1
-        #
-        # dE_by_W_XtoMF = np.array(
-        #     [[grads[i] * dZ1_by_W_XtoMF[j] for j in range(len(dZ1_by_W_XtoMF))] for i in range(len(grads))])
+        # dA1_by_Params = np.array([derivative("gaussian", i) for i in self.layer_1A])
 
-        # Tune params
+        partial_derivs_mfs = []
 
-        # self.weights_XtoMFs -= learning_rate * dE_by_W_XtoMF
-        return None, None
+        for l in range(self.layer_1A.shape[0]):
+            derivs_by_sample = []
+            mfs = self.memClass.mfs_list[l]
+            i = self.layer_1A[l]
+
+            for m in range(len(i)):
+                df_by_mean = partial_dmf(m, "gaussmf", mfs[m], "mean")
+                df_by_sigm = partial_dmf(m, "gaussmf", mfs[m], "sigma")
+                derivs_by_sample.append([df_by_mean, df_by_sigm])
+
+            partial_derivs_mfs.append(derivs_by_sample)
+
+        dA1_by_MFs = dZ1_by_MFs = np.array(partial_derivs_mfs)
+        dZ2_by_dA1 = dE_by_Z2 = grads_l2
+
+        grads_by_mfs = []
+
+        for i in range(len(self.mfs_by_vars_combinations)):
+            grads_by_var = []
+            for m in range(len(self.mfs_by_vars_combinations[i])):
+                grads_by_mf = []
+                for r in range(self.rules.shape[0]):
+                    rule = self.rules[r]
+                    if rule[i] == m:
+                        grads_by_mf.append(grads_l2[r][i])
+                grads_by_var.append(grads_by_mf)
+            grads_by_mfs.append(grads_by_var)
+
+        grads_by_mfs = np.array(grads_by_mfs)
+        grads_by_mfs = np.sum(grads_by_mfs, axis=2)
+
+        dE_by_MF_params = np.array(
+            [[dZ1_by_MFs[j] * np.array(np.matrix(grads_by_mfs[i]).T) for j in range(len(dZ1_by_MFs))]
+             for i in range(len(grads_by_mfs))]
+        )
+
+        return dE_by_MF_params, None
