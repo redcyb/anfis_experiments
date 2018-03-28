@@ -8,12 +8,10 @@ from membership.membership_functions import evaluateMFforVar
 from utils.functions import activate
 
 
-def plotMFs(func, varss, mfs_general):
-    for k, mfs in enumerate(mfs_general):
-        if k > 0:
-            break
+def plotMFs(func, varss, mfs_general, file_name=None):
 
-        print()
+    for k, mfs in enumerate(mfs_general):
+        plt.clf()
 
         xs = np.arange(*varss[k], 0.01)
         ys_2d = [evaluateMFforVar(func, mfs, x) for x in xs]
@@ -22,10 +20,13 @@ def plotMFs(func, varss, mfs_general):
         ys_arr = ys_arr.transpose()
 
         for i in range(ys_arr.shape[0]):
-            # print(mfs[i])
             plt.plot(xs, ys_arr[i, :], label="mf{i}".format(i=i))
 
-        plt.show()
+        if file_name:
+            real_path = os.path.realpath(f"../anfis/data/iris/{file_name}__{k}.png")
+            plt.savefig(real_path)
+        else:
+            plt.show()
 
 
 def plot_first_layer(inputs):

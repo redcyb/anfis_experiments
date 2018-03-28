@@ -42,56 +42,56 @@ Yt = test_set[:, 4:]
 #
 # ]
 
-mf_gauss = [
-
-    [{"mean": 4.4, "sigma": 0.9},
-     {"mean": 6.1, "sigma": 0.7},
-     {"mean": 7.9, "sigma": 0.8}],
-
-    [{"mean": 1.9, "sigma": 0.4},
-     {"mean": 3.2, "sigma": 0.4},
-     {"mean": 4.3, "sigma": 0.6}],
-
-    [{"mean": 1.0, "sigma": 1.3},
-     {"mean": 3.9, "sigma": 1.2},
-     {"mean": 6.9, "sigma": 1.2}],
-
-    [{"mean": 0.1, "sigma": 0.6},
-     {"mean": 1.2, "sigma": 0.1},
-     {"mean": 2.6, "sigma": 0.3}]
-
-]
+# mf_gauss = [
+#
+#     [{"mean": 4.4, "sigma": 0.9},
+#      {"mean": 6.1, "sigma": 0.7},
+#      {"mean": 7.9, "sigma": 0.8}],
+#
+#     [{"mean": 1.9, "sigma": 0.4},
+#      {"mean": 3.2, "sigma": 0.4},
+#      {"mean": 4.3, "sigma": 0.6}],
+#
+#     [{"mean": 1.0, "sigma": 1.3},
+#      {"mean": 3.9, "sigma": 1.2},
+#      {"mean": 6.9, "sigma": 1.2}],
+#
+#     [{"mean": 0.1, "sigma": 0.6},
+#      {"mean": 1.2, "sigma": 0.1},
+#      {"mean": 2.6, "sigma": 0.3}]
+#
+# ]
 
 # BEFORE MATLAB TRAINING
 
-# mf_gauss = [
-#     [{"mean": 4.3, "sigma": 0.6},
-#      {"mean": 6.1, "sigma": 0.6},
-#      {"mean": 7.9, "sigma": 0.6}],
-#
-#     [{"mean": 2.0, "sigma": 0.4},
-#      {"mean": 3.2, "sigma": 0.4},
-#      {"mean": 4.4, "sigma": 0.4}],
-#
-#     [{"mean": 1.0, "sigma": 1},
-#      {"mean": 3.95, "sigma": 1},
-#      {"mean": 6.9, "sigma": 1}],
-#
-#     [{"mean": 0.1, "sigma": 0.4},
-#      {"mean": 1.3, "sigma": 0.4},
-#      {"mean": 2.5, "sigma": 0.4}]
-# ]
+mf_gauss = [
+    [{"mean": 4.3, "sigma": 0.6},
+     {"mean": 6.1, "sigma": 0.6},
+     {"mean": 7.9, "sigma": 0.6}],
+
+    [{"mean": 2.0, "sigma": 0.4},
+     {"mean": 3.2, "sigma": 0.4},
+     {"mean": 4.4, "sigma": 0.4}],
+
+    [{"mean": 1.0, "sigma": 1},
+     {"mean": 3.95, "sigma": 1},
+     {"mean": 6.9, "sigma": 1}],
+
+    [{"mean": 0.1, "sigma": 0.4},
+     {"mean": 1.3, "sigma": 0.4},
+     {"mean": 2.5, "sigma": 0.4}]
+]
 
 
 # ===== Show me initial MFS ================================
 
-# varss = [(4.3, 7.9), (2.0, 4.4), (1.0, 6.9), (0.1, 2.5)]
-# plotMFs(gaussmf, varss, mf_gauss)
+varss = [(4.3, 7.9), (2.0, 4.4), (1.0, 6.9), (0.1, 2.5)]
+plotMFs(gaussmf, varss, mf_gauss, "4x3_gaussmf_linear___before_training")
 
 
 # ===== Learn ANFIS1 with initial MFs and training data =====
 
-def test(epochs=100, threshold=0.001, learning_rate=0.01):
+def test(epochs=1000, threshold=0.001, learning_rate=0.01):
     mfc = MemFuncs(gaussmf, mf_gauss)
 
     # anf = ANFIS1(X, Y, mfc, l5_activation_func="tanh")
@@ -109,6 +109,8 @@ def test(epochs=100, threshold=0.001, learning_rate=0.01):
 
     print(f"TIME SPENT: {(t_fin - t_start).seconds}s")
 
+    plotMFs(gaussmf, varss, anf.memClass.mfs_list, "4x3_gaussmf_linear___MY_training")
+
     predicted_train, errors_train = anf.predict_online(X, Y)
     plot_results_v2(predicted_train, Y)
 
@@ -122,4 +124,4 @@ def test(epochs=100, threshold=0.001, learning_rate=0.01):
 
 # ===== Run ANFIS1 with test data =====
 
-test()
+test(epochs=100, threshold=0.001, learning_rate=0.01)

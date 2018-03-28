@@ -72,7 +72,7 @@ class ANFIS1:
 
     # ============ backprop online learning algorithms ===========================================
 
-    def train_backprop_online(self, training_set, epochs=10, threshold=0.001, learning_rate=0.01):
+    def train_backprop_online(self, training_set, epochs=100, threshold=0.001, learning_rate=0.01):
 
         self.trainingType = 'backprop online'
         # shuffle(training_set)
@@ -109,7 +109,7 @@ class ANFIS1:
             epoch_error = sum(epoch_errors) / epochs
             self.errors = np.append(self.errors, epoch_error)
 
-            if not epoch % 10:
+            if not epoch % 5 or epoch == 1:
                 print(f"\nEpoch: {epoch}")
                 print(f"Error: {epoch_error}; Threshold: {threshold}")
                 print(f"Error: {epoch_error < threshold}")
@@ -176,13 +176,13 @@ class ANFIS1:
 
         if self.layer_4_params is None:
             # TODO Ones only for testing. Change it to randoms!
-            # self.layer_4_params = np.random.normal(0, 0.3, wn_x.shape)
-            self.layer_4_params = np.ones(wn_x.shape)
+            self.layer_4_params = np.random.normal(0, 0.2, wn_x.shape)
+            # self.layer_4_params = np.ones(wn_x.shape)
 
         if self.weights_4to5 is None:
             # TODO Ones only for testing. Change it to randoms!
-            # self.weights_4to5 = np.random.normal(1, 0.1, (wn_x.shape[0], 1))
-            self.weights_4to5 = np.ones((wn_x.shape[0], 1))
+            self.weights_4to5 = np.random.normal(1, 0.2, (wn_x.shape[0], 1))
+            # self.weights_4to5 = np.ones((wn_x.shape[0], 1))
 
         self.layer_3to4_A = wn_x
 
@@ -207,6 +207,7 @@ class ANFIS1:
         # Layer 1
         dE_by_MF_params, _ = self.layer_1_backprop(grads_l2)
 
+        self.update_mfs_params(dE_by_MF_params, learning_rate)
         self.layer_4_params -= learning_rate * dE_by_L4Params
         self.weights_4to5 -= learning_rate * dE_by_W4to5
 
@@ -333,9 +334,22 @@ class ANFIS1:
         grads_by_mfs = np.array(grads_by_mfs)
         grads_by_mfs = np.sum(grads_by_mfs, axis=2)
 
-        dE_by_MF_params = np.array(
-            [[dZ1_by_MFs[j] * np.array(np.matrix(grads_by_mfs[i]).T) for j in range(len(dZ1_by_MFs))]
-             for i in range(len(grads_by_mfs))]
-        )
+        dE_by_MF_params = np.array([dZ1_by_MFs[i] * np.array(np.matrix(grads_by_mfs[i]).T)
+                                    for i in range(len(grads_by_mfs))])
 
         return dE_by_MF_params, None
+
+    def update_mfs_params(self, deltas, learning_rate):
+        mfs = self.memClass.mfs_list
+
+        # TODO Refactoring
+        for m in range(len(mfs)):
+            for i in range(len(mfs[m])):
+                mf = mfs[m][i]
+                _mean_delta = deltas[m][i][0]
+                _sigma_delta = deltas[m][i][1]
+
+                mf["mean"] -= learning_rate * _mean_delta
+                mf["sigma"] -= learning_rate * _sigma_delta
+
+        self.memClass.mfs_list = mfs
