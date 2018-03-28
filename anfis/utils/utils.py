@@ -5,10 +5,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from membership.membership_functions import evaluateMFforVar
+from utils.functions import activate
 
 
 def plotMFs(func, varss, mfs_general):
     for k, mfs in enumerate(mfs_general):
+        if k > 0:
+            break
+
         print()
 
         xs = np.arange(*varss[k], 0.01)
@@ -18,7 +22,7 @@ def plotMFs(func, varss, mfs_general):
         ys_arr = ys_arr.transpose()
 
         for i in range(ys_arr.shape[0]):
-            print(mfs[i])
+            # print(mfs[i])
             plt.plot(xs, ys_arr[i, :], label="mf{i}".format(i=i))
 
         plt.show()
@@ -50,7 +54,43 @@ def read_anfis_from_json_file(file_name):
 
 
 def plot_results_v2(Os, Ys):
-        plt.plot(range(len(Os)), Os, 'ro', label='trained')
-        plt.plot(range(len(Ys)), Ys, 'bo', label='original')
-        plt.legend(loc='upper left')
+    plt.plot(range(len(Os)), Os, 'ro', label='trained')
+    plt.plot(range(len(Ys)), Ys, 'bo', label='original')
+    plt.legend(loc='upper left')
+    plt.show()
+
+
+def plot_func(func, x_range, a, b, show=False):
+
+    xs = np.arange(*x_range, 0.01)
+    xss = [a * x + b for x in xs]
+
+    ys = [activate(func, x) for x in xss]
+    plt.plot(xs, ys)
+
+    if show:
         plt.show()
+
+
+def plot_funcs(funcs, x_range):
+    for f in funcs:
+        func = f[0]
+        a = f[1]
+        b = f[2]
+        plot_func(func, x_range, a, b)
+    plt.show()
+
+
+def gen_mf_by_range(func, mf_count, x_min, x_max):
+    x_len = x_max - x_min
+    x_step = x_len / (mf_count - 1)
+
+    k = mf_count * 2 / x_len
+
+    mf_means = [-k * (x_min + (x_step * i)) for i in range(mf_count)]
+    mf_sigms = [k for i in range(mf_count)]
+    mfs = [[func, mf_sigms[i], mf_means[i]] for i in range(mf_count)]
+
+    # plot_funcs(mfs, [x_min, x_max])
+
+    return [[m[1], m[2]] for m in mfs]

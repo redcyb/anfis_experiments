@@ -8,12 +8,16 @@ import matplotlib.pyplot as plt
 from lse import LSE
 from membership import mf_derivs
 from utils.functions import derivative, activate
+from utils.utils import gen_mf_by_range
 
 
 class ANFIS:
-    layer_1 = None
-    layer_2 = None
+    layer_1A = None
+    layer_2Z = None
+    layer_2A = None
     layer_3 = None
+
+    layer_1mfZ = None
 
     layer_4A = None
     layer_4Z = None
@@ -24,6 +28,7 @@ class ANFIS:
     layer_5Z = None  # Weighted sum of layer 4 output
     E_out = None
     weights_4to5 = None
+    weights_Xto1 = None
     dE_by_A5 = None
 
     l5_activation_func = None
@@ -53,6 +58,14 @@ class ANFIS:
         self.trainingType = 'Not trained yet'
 
         self.l5_activation_func = l5_activation_func
+
+        limits = [
+            [X[:, i].min(), X[:, i].max()] for i in range(X.shape[1])
+            ]
+
+        self.weights_Xto1 = [np.array(gen_mf_by_range("gaussian", 3, *i)) for i in limits]
+
+        pass
 
     def trainHybridJangOffLine(self, epochs=5, tolerance=1e-5, initialGamma=1000, k=0.01):
 
@@ -160,10 +173,10 @@ class ANFIS:
             plt.show()
 
     def plot_results_v2(self, Ys):
-            plt.plot(range(self.layer_5A[0]), self.layer_5A, 'r', label='trained')
-            plt.plot(range(Ys.shape[0]), Ys, 'b', label='original')
-            plt.legend(loc='upper left')
-            plt.show()
+        plt.plot(range(self.layer_5A[0]), self.layer_5A, 'r', label='trained')
+        plt.plot(range(Ys.shape[0]), Ys, 'b', label='original')
+        plt.legend(loc='upper left')
+        plt.show()
 
     def forward_half_pass(self, Xs):
         layer_4 = np.empty(0, )
@@ -236,15 +249,8 @@ class ANFIS:
                         bucket1 = np.empty(len(self.rules[:, 0]))
                         for consequent in range(len(self.rules[:, 0])):
                             fConsequent = np.dot(np.append(self.X[rowX, :], 1.), self.consequents[(
-                                (
-                                    self.X.shape[
-                                        1] + 1) * consequent):(
-                                ((
-                                     self.X.shape[
-                                         1] + 1) * consequent) + (
-                                    self.X.shape[
-                                        1] + 1)),
-                                                                                 colY])
+                                (self.X.shape[1] + 1) * consequent):(
+                            ((self.X.shape[1] + 1) * consequent) + (self.X.shape[1] + 1)), colY])
                             acum = 0
                             if consequent in rulesWithAlpha:
                                 acum = dW_dAplha[np.where(rulesWithAlpha == consequent)] * theWSum[rowX]
@@ -326,7 +332,7 @@ class ANFIS:
     def train_backprop_online(self, training_set, epochs=10, threshold=0.001, learning_rate=0.01):
 
         self.trainingType = 'backprop online'
-        shuffle(training_set)
+        # shuffle(training_set)
         Xs = training_set[:, 0:4]
         Ys = training_set[:, 4:]
 
@@ -357,7 +363,7 @@ class ANFIS:
 
             # Service stuff
 
-            epoch_error = sum(epoch_errors)/epochs
+            epoch_error = sum(epoch_errors) / epochs
             self.errors = np.append(self.errors, epoch_error)
 
             if not epoch % 10:
@@ -371,10 +377,10 @@ class ANFIS:
     def forward_online(self, x):
 
         # layer 1 : FUZZIFICATION
-        self.layer_1 = self.layer_1_forward_online(x)
+        self.layer_1A = self.layer_1_forward_online(x)
 
         # layer 2 : AGGREGATION
-        self.layer_2 = self.layer_2_forward_online()
+        self.layer_2A = self.layer_2_forward_online()
 
         # layer 3 : NORMALIZATION
         self.layer_3 = self.layer_3_forward_online()
@@ -391,6 +397,8 @@ class ANFIS:
         return res
 
     def backprop_online(self, learning_rate=0.01):
+
+
         dE_by_A5 = self.dE_by_A5
         dA5_by_Z5 = derivative(self.l5_activation_func, self.layer_5A)
         dZ5_by_W4to5 = self.layer_4A  # temporary no bias neuron
@@ -420,31 +428,96 @@ class ANFIS:
 
         dE_by_L4Params = np.array([grads_l4[i] * dZ4_by_L4Params[i] for i in range(len(grads_l4))])
 
+        # 3. ====================== Prepare error gradients on Layer 2 ===============================================
+
+        dA2_by_Z2 = derivative("linear", self.layer_2A)
+
+        # get partial derivs by var mfs
+
+        _l2_parts_for_derivative_alloc2 = []
+        for _rule in range(self.rules.shape[0]):
+            _derivs = []
+            _a = []
+            for _var_num in range(self.rules.shape[1]):
+                _d = self.rules[_rule][_var_num]
+                _b = self.layer_1A[_var_num][_d]  # get result of fuzzy term * var input
+                _a.append(_b)
+            for _var_num in range(self.rules.shape[1]):
+                _c = copy.copy(_a)
+                _c.pop(_var_num)
+                _derivs.append(_c)
+            _l2_parts_for_derivative_alloc2.append(_derivs)
+
+        _l2_partial_derivs_by_mfs_alloc3 = []
+        for i in _l2_parts_for_derivative_alloc2:
+            _r = [np.product(derv) for derv in i]
+            _l2_partial_derivs_by_mfs_alloc3.append(_r)
+
+        dZ2_by_L1MFs = np.array(_l2_partial_derivs_by_mfs_alloc3)
+
+        dE_by_Z4 = grads_l4
+        dZ4_by_A2 = self.layer_2Z
+
+        _l2Z = np.array(self.layer_2Z)
+
+        dE_by_A2 = np.array(
+            np.ones(_l2Z.shape) * np.array(np.matrix(dE_by_Z4).T)
+        )
+
+        # grads_l2 = dE_by_A2 * dA2_by_Z2
+        grads_l2 = dE_by_A2  # dA2_by_Z2 contains only zeroes, ignore it
+
         # 3. Prepare updates for L1 MF params
 
-        # 1.1. Tune weights_4to5
+        dA1_by_Z1 = np.array([derivative("gaussian", i) for i in self.layer_1A])
+        dZ1_by_W_XtoMF = self.layer_0A
 
+        dE_by_Z2 = grads_l2
+        dZ2_by_A1 = dZ2_by_L1MFs
+
+        dE_by_A1 = np.array(np.dot(np.matrix(dZ2_by_A1), np.matrix(dE_by_Z2)))[0]
+
+        grads = dE_by_A1 * dA1_by_Z1
+
+        dE_by_W_XtoMF = np.array(
+            [[grads[i] * dZ1_by_W_XtoMF[j] for j in range(len(dZ1_by_W_XtoMF))] for i in range(len(grads))])
+
+        # Tune params
+
+        self.weights_Xto1 -= learning_rate * dE_by_W_XtoMF
         self.layer_4_params -= learning_rate * dE_by_L4Params
         self.weights_4to5 -= learning_rate * dE_by_W4to5
 
         pass
 
     def layer_1_forward_online(self, x):
-        return np.array(self.memClass.evaluate_mf(x))
+        # result1 = np.array(self.memClass.evaluate_mf(x))
+        rr = []
+        for i in range(len(x)):
+            aa = np.array(self.weights_Xto1[i])
+            aa[:, 0] = aa[:, 0] * x[i]
+            aa = np.sum(aa, axis=1)
+            rr.append(aa)
+
+        self.layer_0A = np.append(x, 1)
+
+        return [activate("gaussian", i) for i in rr]
 
     def layer_2_forward_online(self):
-        mi_alloc = [
+        self.layer_2Z = [
             [
-                self.layer_1[var_num][self.rules[fuzzy_term][var_num]]  # get result of fuzzy term * var input
+                self.layer_1A[var_num][self.rules[fuzzy_term][var_num]]  # get result of fuzzy term * var input
                 for var_num in range(self.rules.shape[1])  # for each column in rule. rules.shape[1] = vars len
                 ]
             for fuzzy_term in range(self.rules.shape[0])  # rules rows.shape[0] = mfs terms count
-            ]  # ALL Rules w MFs combinations
-        return np.array([np.product(r) for r in mi_alloc]).T  # weights
+            ]
+
+        # ALL Rules w MFs combinations
+        return np.array([np.product(r) for r in self.layer_2Z]).T  # weights
 
     def layer_3_forward_online(self):
-        weights_l2_sum = np.sum(self.layer_2)  # float
-        return self.layer_2 / weights_l2_sum
+        weights_l2_sum = np.sum(self.layer_2A)  # float
+        return self.layer_2A / weights_l2_sum
 
     def layer_4_forward_online(self, x):
         x__with__bias = np.append(x, 1)
