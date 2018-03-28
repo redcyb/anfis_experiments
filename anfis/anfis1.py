@@ -11,7 +11,7 @@ from utils.functions import derivative, activate
 from utils.utils import gen_mf_by_range
 
 
-class ANFIS:
+class ANFIS1:
     layer_1A = None
     layer_2Z = None
     layer_2A = None

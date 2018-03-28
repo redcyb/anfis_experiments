@@ -5,7 +5,7 @@ import os
 
 from skfuzzy import gaussmf
 
-from anfis1 import ANFIS
+from anfis1 import ANFIS1
 from membership.membership_functions import MemFuncs
 from datetime import datetime
 
@@ -69,13 +69,13 @@ mf_gauss = [
 # plotMFs(gaussmf, varss, mf_gauss)
 
 
-# ===== Learn ANFIS with initial MFs and training data =====
+# ===== Learn ANFIS1 with initial MFs and training data =====
 
 def test(epochs=100, threshold=0.001, learning_rate=0.01):
     mfc = MemFuncs(gaussmf, mf_gauss)
 
-    # anf = ANFIS(X, Y, mfc, l5_activation_func="tanh")
-    anf = ANFIS(X, Y, mfc, l5_activation_func="linear")
+    # anf = ANFIS1(X, Y, mfc, l5_activation_func="tanh")
+    anf = ANFIS1(X, Y, mfc, l5_activation_func="linear")
 
     t_start = datetime.now()
 
@@ -102,6 +102,6 @@ def test(epochs=100, threshold=0.001, learning_rate=0.01):
     print("Average Test Error:", sum([abs(e) for e in errors_train]) / len(errors_test))
 
 
-# ===== Run ANFIS with test data =====
+# ===== Run ANFIS1 with test data =====
 
 test()
