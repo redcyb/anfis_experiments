@@ -1,15 +1,10 @@
-import itertools
-from random import shuffle
-
-import numpy as np
 import copy
-import matplotlib.pyplot as plt
-from skfuzzy import partial_dmf
+import itertools
+import numpy as np
 
-from lse import LSE
-from membership import mf_derivs
+from skfuzzy import partial_dmf
 from utils.functions import derivative, activate
-from utils.utils import gen_mf_by_range
+from utils.utils import gen_mf_by_range, save_json_to_file, read_json_from_file
 
 
 class ANFIS1:
@@ -61,13 +56,16 @@ class ANFIS1:
 
         if self.layer_4_params is None:
             # TODO Ones only for testing. Change it to randoms!
-            self.layer_4_params = np.random.normal(0, 0.2, (self.rules.shape[0], X.shape[1] + 1))
+            # self.layer_4_params = np.random.normal(0, 0.2, (self.rules.shape[0], X.shape[1] + 1))
+            self.layer_4_params = np.array(read_json_from_file("layer_4_params"))
+            # save_json_to_file(self.layer_4_params.tolist(), "layer_4_params")
             # self.layer_4_params = np.ones(wn_x.shape)
 
         if self.weights_4to5 is None:
             # TODO Ones only for testing. Change it to randoms!
-            self.weights_4to5 = np.random.normal(1, 0.2, (self.rules.shape[0], Y.shape[1]))
-            # self.weights_4to5 = np.ones((wn_x.shape[0], 1))
+            # self.weights_4to5 = np.random.normal(1, 0.2, (self.rules.shape[0], Y.shape[1]))
+            # save_json_to_file(self.weights_4to5.tolist(), "weights_4to5")
+            self.weights_4to5 = np.ones((self.rules.shape[0], Y.shape[1]))
 
         pass
 
@@ -207,7 +205,7 @@ class ANFIS1:
 
         self.update_mfs_params(dE_by_MF_params, learning_rate)
         self.layer_4_params -= learning_rate * dE_by_L4Params
-        self.weights_4to5 -= learning_rate * dE_by_W4to5
+        # self.weights_4to5 -= learning_rate * dE_by_W4to5
 
         pass
 

@@ -215,8 +215,8 @@ class ANFIS:
             print(self.trainingType)
         else:
             plt.clf()
-            plt.plot(range(len(self.fitted_values)), self.fitted_values, 'r', label='trained')
-            plt.plot(range(len(self.Y)), self.Y, 'b', label='original')
+            plt.plot(range(len(self.fitted_values)), self.fitted_values, 'go', label='trained')
+            plt.plot(range(len(self.Y)), self.Y, 'bo', label='original')
             plt.legend(loc='upper left')
             plt.show()
 

@@ -17,7 +17,6 @@ X = training_set[:, 0:4]
 Y = training_set[:, 4:]
 
 test_set = numpy.loadtxt(os.path.realpath("../anfis/data/iris/irisTest.dat"), usecols=[0, 1, 2, 3, 4])
-shuffle(test_set)
 Xt = test_set[:, 0:4]
 Yt = test_set[:, 4:]
 
@@ -117,16 +116,16 @@ def test(epochs=1000, threshold=0.001, learning_rate=0.01):
     plotMFs(gaussmf, varss, anf.memClass.mfs_list, "4x3_gaussmf_linear___MY_training")
 
     predicted_train, errors_train = anf.predict_online(X, Y)
-    plot_results_v2(predicted_train, Y)
+    plot_results_v2(predicted_train, Y, "iris_predicted_train_4L")
 
     print("Average Training Error:", sum([abs(e) for e in errors_train]) / len(errors_train))
 
     predicted_test, errors_test = anf.predict_online(Xt, Yt)
-    plot_results_v2(predicted_test, Yt)
+    plot_results_v2(predicted_test, Yt, "iris_predicted_test_4L")
 
     print("Average Test Error:", sum([abs(e) for e in errors_train]) / len(errors_test))
 
 
 # ===== Run ANFIS1 with test data =====
 
-test(epochs=1000, threshold=0.001, learning_rate=0.01)
+test(epochs=500, threshold=0.00102, learning_rate=0.01)

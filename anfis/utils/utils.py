@@ -1,6 +1,5 @@
 import json
 import os
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -9,7 +8,6 @@ from utils.functions import activate
 
 
 def plotMFs(func, varss, mfs_general, file_name=None):
-
     for k, mfs in enumerate(mfs_general):
         plt.clf()
 
@@ -23,7 +21,7 @@ def plotMFs(func, varss, mfs_general, file_name=None):
             plt.plot(xs, ys_arr[i, :], label="mf{i}".format(i=i))
 
         if file_name:
-            real_path = os.path.realpath(f"../anfis/data/iris/{file_name}__{k}.png")
+            real_path = os.path.realpath(f"../anfis/data/results/{file_name}__{k}.png")
             plt.savefig(real_path)
         else:
             plt.show()
@@ -54,12 +52,17 @@ def read_anfis_from_json_file(file_name):
     return data
 
 
-def plot_results_v2(Os, Ys):
+def plot_results_v2(Os, Ys, filename=None):
     plt.clf()
-    plt.plot(range(len(Os)), Os, 'ro', label='trained')
-    plt.plot(range(len(Ys)), Ys, 'bo', label='original')
+    plt.plot(range(len(Os)), Os, 'ro', label='trained', ms=4)
+    plt.plot(range(len(Ys)), Ys, 'bo', label='original', ms=4)
     plt.legend(loc='upper left')
-    plt.show()
+
+    if filename:
+        real_path = os.path.realpath(f"../anfis/data/results/{filename}.png")
+        plt.savefig(real_path)
+    else:
+        plt.show()
 
 
 def plot_func(func, x_range, a, b, show=False):
@@ -98,3 +101,16 @@ def gen_mf_by_range(func, mf_count, x_min, x_max):
     # plot_funcs(mfs, [x_min, x_max])
 
     return [[m[1], m[2]] for m in mfs]
+
+
+def save_json_to_file(data, filename):
+    real_path = os.path.realpath(f"../anfis/data/settings/{filename}.json")
+    with open(real_path, "w") as f:
+        f.write(json.dumps(data))
+
+
+def read_json_from_file(filename):
+    real_path = os.path.realpath(f"../anfis/data/settings/{filename}.json")
+    with open(real_path, "r") as f:
+        data = f.read()
+        return json.loads(data)
