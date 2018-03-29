@@ -5,13 +5,17 @@ from skfuzzy import gaussmf
 
 from anfis_old import ANFIS
 from membership.membership_functions import MemFuncs
-from utils.utils import plotMFs
+from utils.utils import plotMFs, plot_results_v2
 from datetime import datetime
 
-ts = numpy.loadtxt(os.path.realpath("../anfis/data/iris/irisTrain.dat"), usecols=[0, 1, 2, 3, 4])
+training_set = numpy.loadtxt(os.path.realpath("../anfis/data/iris/irisTrain.dat"), usecols=[0, 1, 2, 3, 4])
+X = training_set[:, 0:4]
+Y = training_set[:, 4]
 
-X = ts[:, 0:4]
-Y = ts[:, 4]
+test_set = numpy.loadtxt(os.path.realpath("../anfis/data/iris/irisTest.dat"), usecols=[0, 1, 2, 3, 4])
+Xt = test_set[:, 0:4]
+Yt = test_set[:, 4]
+
 
 # mf_gauss = [
 #
@@ -68,7 +72,12 @@ def test(epochs=10):
     anf = ANFIS(X, Y, mfc)
 
     t_start = datetime.now()
-    anf.trainHybridJangOffLine(epochs=epochs)
+
+    try:
+        anf.trainHybridJangOffLine(epochs=epochs)
+    except KeyboardInterrupt:
+        pass
+
     t_fin = datetime.now()
 
     print(f"TIME SPENT: {(t_fin - t_start).seconds}s")
@@ -78,7 +87,13 @@ def test(epochs=10):
 
     plotMFs(gaussmf, varss, anf.memClass.mfs_list, "OLD_4x3_gaussmf_linear___MY_training")
 
+    predicted_train = anf.fitted_values
+    plot_results_v2(predicted_train, Y)
+
+    predicted_test = anf.predict_no_learn(Xt, Yt)
+    plot_results_v2(predicted_test, Yt)
+
 
 # ===== Run ANFIS1 with test data =====
 
-test(100)
+test(2)

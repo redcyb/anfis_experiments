@@ -59,6 +59,16 @@ class ANFIS1:
         self.mfs_by_vars_combinations = [[x for x in range(num_of_mfs_for_each_var)] for z in range(X.shape[1])]
         self.rules = np.array(list(itertools.product(*self.mfs_by_vars_combinations)))
 
+        if self.layer_4_params is None:
+            # TODO Ones only for testing. Change it to randoms!
+            self.layer_4_params = np.random.normal(0, 0.2, (self.rules.shape[0], X.shape[1] + 1))
+            # self.layer_4_params = np.ones(wn_x.shape)
+
+        if self.weights_4to5 is None:
+            # TODO Ones only for testing. Change it to randoms!
+            self.weights_4to5 = np.random.normal(1, 0.2, (self.rules.shape[0], Y.shape[1]))
+            # self.weights_4to5 = np.ones((wn_x.shape[0], 1))
+
         pass
 
     def predict_online(self, Xs, Ys=None):
@@ -173,19 +183,7 @@ class ANFIS1:
     def layer_4_forward_online(self, x):
         x__with__bias = np.append(x, 1)
         wn_x = np.array([wght_n * x__with__bias for wght_n in self.layer_3A])
-
-        if self.layer_4_params is None:
-            # TODO Ones only for testing. Change it to randoms!
-            self.layer_4_params = np.random.normal(0, 0.2, wn_x.shape)
-            # self.layer_4_params = np.ones(wn_x.shape)
-
-        if self.weights_4to5 is None:
-            # TODO Ones only for testing. Change it to randoms!
-            self.weights_4to5 = np.random.normal(1, 0.2, (wn_x.shape[0], 1))
-            # self.weights_4to5 = np.ones((wn_x.shape[0], 1))
-
         self.layer_3to4_A = wn_x
-
         self.layer_4Z = wn_x * self.layer_4_params
 
         return np.array(np.matrix(np.sum(self.layer_4Z, axis=1)).T)

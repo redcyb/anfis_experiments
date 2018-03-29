@@ -129,11 +129,4 @@ def test(epochs=1000, threshold=0.001, learning_rate=0.01):
 
 # ===== Run ANFIS1 with test data =====
 
-
-# if __name__ == '__main__':
-#     try:
-#         test(epochs=300, threshold=0.001, learning_rate=0.01)
-#     except KeyboardInterrupt:
-#         sys.exit(0)
-
 test(epochs=1000, threshold=0.001, learning_rate=0.01)

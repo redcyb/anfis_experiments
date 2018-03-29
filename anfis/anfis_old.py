@@ -197,12 +197,14 @@ class ANFIS:
         if self.trainingType == 'Not trained yet':
             print(self.trainingType)
         else:
+            plt.clf()
             plt.plot(range(len(self.errors)), self.errors, 'ro', label='errors')
             plt.ylabel('error')
             plt.xlabel('epoch')
             plt.show()
 
     def plotMF(self, x, input_var, func):
+        plt.clf()
         for mf in range(len(self.memFuncs[input_var])):
             y = func(x, **self.memClass.MFList[input_var][mf])
             plt.plot(x, y, 'r')
@@ -212,6 +214,7 @@ class ANFIS:
         if self.trainingType == 'Not trained yet':
             print(self.trainingType)
         else:
+            plt.clf()
             plt.plot(range(len(self.fitted_values)), self.fitted_values, 'r', label='trained')
             plt.plot(range(len(self.Y)), self.Y, 'b', label='original')
             plt.legend(loc='upper left')
@@ -366,3 +369,13 @@ class ANFIS:
         layerFive = np.dot(layerFour, self.consequents)
 
         return layerFive
+
+    def predict_no_learn(self, varsToTest, Y):
+        layer_4, weights_l2_sums, weights_l2 = self.forward_half_pass(varsToTest)
+
+        layer_5 = np.dot(layer_4, self.consequents)
+
+        error = np.sqrt(np.sum((Y - layer_5.T) ** 2) / Y.shape[0])
+        print('prediction error: ', error)
+
+        return layer_5

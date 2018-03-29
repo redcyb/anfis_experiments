@@ -63,6 +63,7 @@ def plot_results_v2(Os, Ys):
 
 
 def plot_func(func, x_range, a, b, show=False):
+    plt.clf()
 
     xs = np.arange(*x_range, 0.01)
     xss = [a * x + b for x in xs]
@@ -75,6 +76,7 @@ def plot_func(func, x_range, a, b, show=False):
 
 
 def plot_funcs(funcs, x_range):
+    plt.clf()
     for f in funcs:
         func = f[0]
         a = f[1]
