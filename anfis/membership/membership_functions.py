@@ -88,7 +88,7 @@ class MemFuncs:
     def __init__(self, func, mfs_list):
         self.mfs_list = mfs_list
         self.func = func
-        print(func.__name__)
+        # print(func.__name__)
 
     def evaluate_mf(self, x):
         if not self.func:
